@@ -1,0 +1,14 @@
+# Core Web Server & API Framework
+fastapi>=0.110.0
+uvicorn>=0.28.0
+pydantic>=2.6.0
+python-multipart>=0.0.9
+requests>=2.31.0
+
+# MetaTrader 5 Direct Broker Feed & Math Analysis
+MetaTrader5>=5.0.45
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Headless & WebSocket Testing
+websockets>=12.0

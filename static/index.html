@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trading Strategy Simulator & Replay Engine</title>
+  <link rel="stylesheet" href="/static/style.css?v=3.6">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- ================= TOP HEADER & CONTROL RIBBON ================= -->
+  <header class="header">
+    <!-- TIER 1: Primary Controls & Live Account Metrics -->
+    <div class="header-top">
+      <div class="header-left">
+        <div class="logo-badge">
+          <span class="logo-icon">⚡</span>
+          <span>TRADING SIMULATOR</span>
+        </div>
+
+        <!-- Symbol Selector & TradingView Style Quick Search + Edit List -->
+        <div class="symbol-select-wrapper" style="display:flex;align-items:center;gap:4px;">
+          <select id="symbolSelect" title="Chọn cặp giao dịch (Mặc định: NAS100)" style="min-width:165px;font-weight:700;">
+            <option value="NAS100" selected>NAS100 - USTEC (Default)</option>
+            <option value="XAUUSD">XAUUSD - Gold</option>
+            <option value="EURUSD">EURUSD - Euro</option>
+            <option value="GBPUSD">GBPUSD - British Pound</option>
+            <option value="USDJPY">USDJPY - Japanese Yen</option>
+            <option value="_MANAGE_SYMBOLS_">✏️ Sửa / Ẩn-Hiện danh sách cặp...</option>
+            <option value="_OPEN_SEARCH_">🔍 Tìm cặp khác (TradingView)...</option>
+          </select>
+          <button class="btn-header" id="btnManageSymbols" title="Chỉnh sửa danh sách cặp (Ẩn / Hiện / Đặt mặc định)" style="padding:4px 7px;border-color:#94a3b8;color:#cbd5e1;">
+            <span>✏️</span>
+          </button>
+          <button class="btn-header" id="btnOpenSymbolSearch" title="Mở bảng tìm kiếm mã cặp tiền TradingView (Tự động thêm vào MT5 Market Watch)" style="padding:4px 8px;border-color:#38bdf8;color:#38bdf8;font-weight:700;display:flex;align-items:center;gap:4px;">
+            <span>🔍</span>
+            <span>Tìm Cặp</span>
+          </button>
+        </div>
+
+        <!-- TradingView-Style Active-Chart Timeframe Bar (Shows K1/K2/K3 + Favorite TFs + Dropdown) -->
+        <div class="tv-tf-bar" id="tvTfBar" title="Click vào bất kỳ biểu đồ nào (hoặc K1/K2/K3) rồi chọn Time-frame yêu thích">
+          <div class="tv-tf-panes" id="tvTfPanes">
+            <button class="tv-pane-tab active" data-slot="1" id="tvPaneTab1" title="Chọn Khung 1 (Trái)">K1: <b id="tvPaneTf1">H4</b></button>
+            <button class="tv-pane-tab" data-slot="2" id="tvPaneTab2" title="Chọn Khung 2 (Giữa)">K2: <b id="tvPaneTf2">H1</b></button>
+            <button class="tv-pane-tab" data-slot="3" id="tvPaneTab3" title="Chọn Khung 3 (Phải)">K3: <b id="tvPaneTf3">M15</b></button>
+          </div>
+          <div class="tv-tf-divider"></div>
+          <div class="tv-fav-tf-list" id="tvFavTfList"></div>
+          <div class="tv-tf-dropdown-wrap">
+            <button class="tv-tf-drop-btn" id="btnTvTfDropdown" title="Mở tất cả Time-frame & tùy chỉnh Yêu thích (★)">▾</button>
+            <div class="tv-tf-dropdown-menu" id="tvTfDropdownMenu"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Quick Actions -->
+      <div class="header-right">
+        <button class="btn-header" id="btnToggleHeaderTools" title="Mở / Đóng bảng Công cụ (Đa khung, Layout, Combine, EA, Balance/PnL)" style="padding:4px 10px;border-color:#38bdf8;color:#38bdf8;font-weight:700;">
+          <span id="headerToolsArrow">▸</span>
+          <span>Công cụ</span>
+        </button>
+        <button class="btn-header" id="btnToggleSidebar" title="Thu gọn / Mở rộng bảng lệnh bên phải" style="padding:4px 8px;">
+          <span>◧ Sidebar</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Floating Dropdown Panel for "Công cụ" (Cleanly overlays charts below, never cut off in fullscreen) -->
+    <div id="headerToolsPopover" class="header-tools-popover">
+      <div class="popover-section-title">⚙️ Bảng Công Cụ Đa Khung, Forecast & Tài Khoản</div>
+      <div class="popover-row">
+        <!-- Multi-Timeframe Triplet Selector -->
+        <div class="tf-pair-select-wrapper">
+          <select id="tfPairSelect" title="Chọn bộ 3 khung thời gian đồng bộ" style="background:#1e293b;border-color:#38bdf8;color:#38bdf8;font-weight:700;">
+            <option value="H4_H1_M15" selected>⏱️ 3 Khung: H4 + H1 + M15 (Vàng / Swing Forex)</option>
+            <option value="D1_H4_H1">🏛️ 3 Khung: D1 + H4 + H1 (Chuẩn Forex Majors)</option>
+            <option value="H1_M15_M5">⚡ 3 Khung: H1 + M15 + M5 (Intraday / DCA Scalp)</option>
+            <option value="M15_M5_M1">🚀 3 Khung: M15 + M5 + M1 (Fast Scalping M1)</option>
+            <option value="H4_M15">⏱️ 2 Khung: H4 + M15 (Legacy Dual)</option>
+            <option value="H1_M5">⏱️ 2 Khung: H1 + M5 (Legacy Dual)</option>
+          </select>
+        </div>
+
+        <!-- Layout Selector: 3 Charts / 2 Charts / 1 Chart -->
+        <div class="layout-select-wrapper">
+          <select id="layoutSelect" title="Chọn bố cục hiển thị biểu đồ" style="background:#1e293b;border-color:#10b981;color:#10b981;font-weight:700;border-radius:6px;padding:4px 8px;font-size:12px;">
+            <option value="3_CHARTS" selected>◫ 3 Khung (Tri-View)</option>
+            <option value="2_CHARTS">▥ 2 Khung (Dual-View)</option>
+            <option value="1_CHART">◻ 1 Khung (Single-View)</option>
+          </select>
+        </div>
+
+        <!-- Forecast Mode Selector (Combine HTF + LTF) -->
+        <div class="forecast-mode-select-wrapper">
+          <select id="forecastModeSelect" title="Chế độ Forecast: Kết hợp Khung Lớn H4/H1 (70%) + Trigger M15/M5 (30%)" style="background:#1e293b;border-color:#f59e0b;color:#fbbf24;font-weight:700;">
+            <option value="COMBINED_HTF_LTF" selected>⚓ Combine 70% HTF + 30% LTF</option>
+            <option value="HTF_ANCHOR_ONLY">🏛️ 100% Khung Lớn (H4/H1 Cố Định)</option>
+            <option value="LTF_MICRO_ONLY">⚡ Khung Nhỏ (M15/M5 Thuần)</option>
+          </select>
+        </div>
+
+        <!-- Live Realtime Forecast Toggle Button -->
+        <button class="btn-header" id="btnLiveForecast" title="Bật/Tắt chế độ Forecast Realtime trực tiếp từ MT5 / Live Market" style="background:rgba(239,68,68,0.18);border-color:#ef4444;color:#fca5a5;font-weight:700;">
+          <span id="liveDotIcon">🔴</span>
+          <span id="liveToggleText">Live Realtime: TẮT</span>
+        </button>
+
+        <!-- Multi-Pair Live Radar Button -->
+        <button class="btn-header" id="btnOpenLiveRadar" title="Quét toàn bộ các cặp tiền & Vàng theo thời gian thực" style="background:rgba(56,189,248,0.18);border-color:#38bdf8;color:#e0f2fe;font-weight:700;">
+          <span>📡</span>
+          <span>Radar Đa Cặp</span>
+        </button>
+
+        <!-- Forecast Accuracy & Self-Improvement Modal Button -->
+        <button class="btn-header" id="btnOpenAccuracyModal" title="Xem Bảng Điểm Độ Chính Xác 3-Trong-1 & Tự Học" style="background:rgba(16,185,129,0.2);border-color:#10b981;color:#6ee7b7;font-weight:700;">
+          <span>🎯</span>
+          <span>Độ Chính Xác & Tự Học</span>
+        </button>
+      </div>
+
+      <div class="popover-row">
+        <!-- EA Preset Selector -->
+        <div class="ea-preset-select-wrapper">
+          <select id="eaPresetSelect" title="Chọn Preset EA" style="background:#1e293b;border-color:#a855f7;color:#a855f7;font-weight:700;">
+            <option value="v3.0_EMA21_Probabilistic_MacroKNN" selected>🧠 v3.0 EMA21 Prob Macro k-NN</option>
+            <option value="v3.0_P1_Probabilistic_MacroKNN_Momentum">🧠 v3.0 P1 Macro k-NN Momentum (.set)</option>
+            <option value="v3.0_P2_Probabilistic_StrictEdge_Filter">🧠 v3.0 P2 Strict Edge Filter (.set)</option>
+            <option value="v3.0_EMA21_Baseline_NoProbFilter">📊 v3.0 EMA21 Baseline (No Prob)</option>
+            <option value="v1.41_XAU_Linear_Max4Orders_Continuous">🤖 v1.41 Linear (Max 4)</option>
+            <option value="v1.41_XAU_Flat002_Max4Orders_Continuous">🤖 v1.41 Flat 0.02L (Max 4)</option>
+            <option value="v1.40_XAU_SlidingWindow_RSI_UltraFastScalp">🤖 v1.40 RSI UltraFast</option>
+            <option value="v1.40_XAU_SlidingWindow_UltraFastVolume">🤖 v1.40 Flat UltraFast</option>
+            <option value="v1.36_Scalper_1H_XAUUSD">🤖 v1.36 Scalper 1H</option>
+          </select>
+        </div>
+
+        <button class="btn-header" id="btnEAConfig" title="Tùy chỉnh tham số Simple DCA EA" style="border-color:#38bdf8;color:#38bdf8;">
+          <span>⚙️</span>
+          <span>EA Config</span>
+        </button>
+
+        <button class="btn-header" id="btnToggleEA" title="Bật/Tắt tự động chạy EA trong Replay" style="border-color:#10b981;color:#10b981;">
+          <span>⚡</span>
+          <span id="eaToggleText">EA Replay: TẮT</span>
+        </button>
+
+        <button class="btn-header" id="btnFastBacktest" title="Chạy Fast Backtest tức thì toàn bộ lịch sử nến" style="background:linear-gradient(135deg, rgba(16,185,129,0.3) 0%, rgba(56,189,248,0.3) 100%);border-color:#10b981;color:#fff;font-weight:700;">
+          <span>🚀</span>
+          <span>Fast Backtest</span>
+        </button>
+      </div>
+
+      <div class="popover-row popover-metrics-row">
+        <div class="header-metrics" id="headerMetricsGroup">
+          <div class="metric-item">
+            <span class="metric-label">Balance</span>
+            <span class="metric-value" id="metricBalance">$10,000.00</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Equity</span>
+            <span class="metric-value" id="metricEquity">$10,000.00</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Net PnL</span>
+            <span class="metric-value" id="metricPnL">$0.00 (0.00%)</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Win Rate</span>
+            <span class="metric-value" id="metricWinRate">0% (0/0)</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Trades</span>
+            <span class="metric-value" id="metricTrades">0</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+          <button class="btn-header" id="btnStatsModal" title="Xem báo cáo chi tiết" style="padding:4px 10px;">
+            <span>📈 Report</span>
+          </button>
+          <button class="btn-header" id="btnReset" title="Reset tài khoản" style="padding:4px 10px;color:var(--color-bear);">
+            <span>🔄 Reset</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TIER 2: Secondary Quick Chart Tools Ribbon -->
+    <div class="header-ribbon">
+      <!-- LIVE / BACKTEST Mode Switcher Button -->
+      <button class="btn-header" id="btnLiveModeToggle" title="Chuyển đổi giữa Chế độ LIVE (MT5 Thị Trường Thực) và Chế độ BACKTEST (Tua Nến)" style="border-color:#ef4444;color:#fca5a5;font-weight:800;padding:4px 12px;background:rgba(239,68,68,0.18);">
+        <span id="liveModeDot">🔴</span>
+        <span id="liveModeText">Chế độ: BACKTEST (Bấm sang LIVE)</span>
+      </button>
+
+      <div class="ribbon-divider"></div>
+
+      <!-- Auto-Center Follow Button -->
+      <button class="btn-header" id="btnCenterChart" title="Tự động giữ nến đang chạy ở vị trí 95% sát lề phải (Phím: R)">
+        <span>🎯</span>
+        <span id="centerStatusText">Center (95%)</span>
+      </button>
+
+      <!-- Pin Giá (MT5 Shift) Button -->
+      <button class="btn-header active" id="btnPinPrice" title="Thanh Ghim MT5: Nến luôn dừng ở vạch ghim, giá cũ đẩy ra ngoài (Phím: P)" style="border-color: #38bdf8; color: #38bdf8; font-weight: 700;">
+        <span>📌</span>
+        <span id="pinStatusText">Thanh Ghim (MT5)</span>
+      </button>
+
+      <!-- Reset Price Scale & Center View Button -->
+      <button class="btn-header" id="btnResetScale" title="Reset tỷ lệ trục giá và zoom đưa nến về giữa màn hình (Phím: Z hoặc Double-Click biểu đồ)">
+        <span>🔄</span>
+        <span>Reset Scale</span>
+      </button>
+
+      <!-- Dynamic SL/TP Forecast Toggle Button -->
+      <button class="btn-header" id="btnToggleDynamicSlTp" title="Bật/Tắt đường mục tiêu Dynamic SL/TP & Dự báo xác suất tương lai trên biểu đồ" style="border-color:#64748b;color:#94a3b8;font-weight:700;">
+        <span>🎯</span>
+        <span id="dynamicSlTpStatusText">Dynamic SL/TP: TẮT</span>
+      </button>
+
+      <div class="ribbon-divider"></div>
+
+      <!-- Indicators Modal Button -->
+      <button class="btn-header" id="btnOpenIndicators" title="Quản lý và bật tắt các chỉ báo">
+        <span>📊</span>
+        <span>Indicators</span>
+      </button>
+
+      <!-- Custom Script Editor Button (Pine-Style) -->
+      <button class="btn-header" id="btnOpenScriptEditor" title="Trình soạn thảo Script chỉ báo (giống Pine Editor)" style="border-color:rgba(168,85,247,0.6);color:#d8b4fe;">
+        <span>📝</span>
+        <span>Script Editor</span>
+      </button>
+
+      <!-- Nạp Chuẩn Bộ Chỉ Báo TF1 Button -->
+      <button class="btn-header" id="btnQuickLoadTF1" title="Nạp nhanh đầy đủ bộ chỉ báo chuẩn cho Khung 1 TF1 (EMA 21/50/200, BB 20, RSI 14, Stoch, Div)" style="border-color:#38bdf8;color:#38bdf8;font-weight:700;">
+        <span>⚡</span>
+        <span>Nạp TF1</span>
+      </button>
+
+      <!-- Template Preset Selector -->
+      <div class="template-select-wrapper">
+        <select id="templateSelect" title="Chọn mẫu chỉ báo Template">
+          <option value="Divergence" selected>📁 Divergence.tpl</option>
+        </select>
+      </div>
+
+      <!-- Save Template Button -->
+      <button class="btn-header" id="btnSaveTemplate" title="Lưu cấu hình template hiện tại">
+        <span>💾</span>
+        <span>Save Template</span>
+      </button>
+
+      <div class="ribbon-divider"></div>
+
+      <!-- Auto Radar Backtest Mode Button -->
+      <button class="btn-header" id="btnAutoRadar" title="Tự động vào lệnh Radar, SL, TP 1:2 & 1:3 (kèm BE), Pause 2s và Chuông báo" style="background: rgba(168, 85, 247, 0.15); border-color: var(--color-purple); color: #cbd5e1;">
+        <span>⚡</span>
+        <span>Auto-Radar</span>
+      </button>
+
+      <!-- Sound Toggle & Test Buttons -->
+      <button class="btn-header active" id="btnSoundToggle" title="Bật/Tắt chuông báo âm thanh khi Entry, SL, TP" style="border-color: var(--color-bull); color: var(--color-bull);">
+        <span>🔔</span>
+        <span id="soundStatusText">Chuông: BẬT</span>
+      </button>
+
+      <button class="btn-header" id="btnTestSound" title="Bấm để kiểm tra phát chuông ngay lập tức" style="border-color: #f59e0b; color: #f59e0b; padding: 4px 8px;">
+        <span>🔊</span>
+        <span>Test</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= MAIN DUAL-CHART & TRADE WORKSPACE ================= -->
+  <main class="main-workspace">
+    <!-- TradingView-Style Left Drawing Toolbar -->
+    <aside class="tv-drawing-toolbar" id="tvDrawingToolbar" title="Công cụ vẽ kỹ thuật (TradingView)">
+      <button class="tv-draw-btn active" data-tool="pointer" title="Con trỏ mặc định (Esc)">✚</button>
+      <div class="tv-draw-sep"></div>
+      <button class="tv-draw-btn" data-tool="hline" title="Đường Ngang Hỗ Trợ / Kháng Cự (H-Line)">─</button>
+      <button class="tv-draw-btn" data-tool="trendline" title="Đường Xu Hướng (Trendline - Click 2 điểm)">╱</button>
+      <button class="tv-draw-btn" data-tool="zone" title="Vùng Cung Cầu / Supply-Demand Zone (Click 2 biên)">▭</button>
+      <div class="tv-draw-sep"></div>
+      <button class="tv-draw-btn" data-tool="rr_long" title="Đo Vị Thế LONG (Entry / SL / TP 1:2)" style="color:#10b981;">▲R</button>
+      <button class="tv-draw-btn" data-tool="rr_short" title="Đo Vị Thế SHORT (Entry / SL / TP 1:2)" style="color:#ef4444;">▼R</button>
+      <div class="tv-draw-sep"></div>
+      <button class="tv-draw-btn del" data-tool="clear" title="Xóa toàn bộ nét vẽ">🗑️</button>
+    </aside>
+    
+    <!-- TRIPLE CHARTS: TF1 Left, TF2 Middle, TF3 Right -->
+    <div class="chart-area layout-3" id="chartAreaContainer">
+      
+      <!-- H4 / TF1 Higher Timeframe Chart Pane -->
+      <div class="chart-pane" id="paneH4">
+        <div class="chart-header">
+          <div class="chart-title">
+            <span id="titleTF1">Higher Timeframe (Macro Anchor)</span>
+            <span class="timeframe-badge" id="badgeTF1" style="background:#0284c7;">H4</span>
+            <span class="tf-countdown" id="countdownTF1" title="Đếm ngược đóng nến khung TF1" style="font-size:10px;font-family:var(--font-mono);color:#fbbf24;background:rgba(245,158,11,0.12);padding:1px 5px;border-radius:3px;"></span>
+            <button class="btn-chart-fit" id="btnFitTF1" title="Fit & Reset tỷ lệ khung này">⤢ Fit</button>
+            <button class="btn-chart-fit" id="btnDashSettings" title="Cấu hình 4-Pillar MTF Dashboard" style="border-color:#38bdf8;color:#38bdf8;">⚙️ Dash</button>
+          </div>
+          <div class="chart-ohlc" id="ohlcH4">
+            <span>O: --</span> <span>H: --</span> <span>L: --</span> <span>C: --</span>
+          </div>
+        </div>
+
+        <!-- Tier-1 Macro HTF Strategic Anchor Forecast Bar -->
+        <div id="macroContextBar" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 12px;background:rgba(15,23,42,0.95);border-bottom:1px solid rgba(245,158,11,0.3);font-size:11px;font-family:var(--font-mono);z-index:18;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-weight:700;color:#fbbf24;">🏛️ Khung Lớn (HTF):</span>
+            <span id="macroProbUpText" style="color:#10b981;font-weight:700;">🟢 UP 33.3%</span>
+            <span style="color:#475569;">|</span>
+            <span id="macroProbSwText" style="color:#94a3b8;font-weight:600;">⚪ SW 33.4%</span>
+            <span style="color:#475569;">|</span>
+            <span id="macroProbDnText" style="color:#ef4444;font-weight:700;">🔴 DN 33.3%</span>
+          </div>
+          <div style="flex:1;max-width:160px;height:7px;background:#1e293b;border-radius:4px;overflow:hidden;display:flex;">
+            <div id="macroBarUp" style="width:33.3%;background:#10b981;transition:width 0.2s;"></div>
+            <div id="macroBarSw" style="width:33.4%;background:#64748b;transition:width 0.2s;"></div>
+            <div id="macroBarDn" style="width:33.3%;background:#ef4444;transition:width 0.2s;"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;color:#cbd5e1;">
+            <span>Regime: <b id="probMacroRegime" style="color:#38bdf8;">NEUTRAL</b></span>
+            <span id="probDnaTimeBadge" style="padding:2px 6px;border-radius:4px;background:rgba(56,189,248,0.12);color:#38bdf8;font-size:10px;">--:-- Server (--:-- VN)</span>
+          </div>
+        </div>
+
+        <div class="chart-canvas" id="chartH4">
+          <!-- 4-Pillar MTF Master Dashboard Floating HUD (TradingView Style) -->
+          <div id="mtfMasterDashboard" class="mtf-master-dashboard"></div>
+        </div>
+        <!-- Floating Reset Chart View Button -->
+        <button class="tv-reset-view-btn" id="btnResetView_H4" title="Reset chart view (Alt+R)">
+          <svg viewBox="0 0 18 18" width="13" height="13"><path fill="currentColor" d="M9 3a6 6 0 1 0 6 6h-1.5A4.5 4.5 0 1 1 9 4.5V7l4-3.5L9 0v3z"/></svg>
+        </button>
+        <div class="resizer-horz" id="resizerH4_1" title="Kéo để chỉnh độ cao chart H4 / Stoch"><div class="resizer-grip"></div></div>
+        <div class="sub-pane" id="subChartStoch_H4" style="height:70px;"></div>
+        <div class="resizer-horz" id="resizerH4_2" title="Kéo để chỉnh độ cao Stoch / RSI"><div class="resizer-grip"></div></div>
+        <div class="sub-pane" id="subChartRSI_H4" style="height:70px;"></div>
+        <div class="resizer-horz" id="resizerH4_3" title="Kéo để chỉnh độ cao RSI / MACD"><div class="resizer-grip"></div></div>
+        <div class="sub-pane" id="subChartMACD_H4" style="height:70px;"></div>
+      </div>
+
+      <!-- TF2 Intermediate Timeframe Chart Pane (Structure / Trend Alignment) -->
+      <div class="chart-pane" id="paneTF2">
+        <div class="chart-header">
+          <div class="chart-title">
+            <span id="titleTF2">Structure Timeframe (Cấu Trúc H1/M15)</span>
+            <span class="timeframe-badge" id="badgeTF2" style="background:#6366f1;">H1</span>
+            <span class="tf-countdown" id="countdownTF2" title="Đếm ngược đóng nến khung TF2" style="font-size:10px;font-family:var(--font-mono);color:#fbbf24;background:rgba(245,158,11,0.12);padding:1px 5px;border-radius:3px;"></span>
+            <button class="btn-chart-fit" id="btnFitTF2" title="Fit & Reset tỷ lệ khung này">⤢ Fit</button>
+          </div>
+          <div class="chart-ohlc" id="ohlcTF2">
+            <span>O: --</span> <span>H: --</span> <span>L: --</span> <span>C: --</span>
+          </div>
+        </div>
+
+        <div class="chart-canvas" id="chartTF2"></div>
+        <!-- Floating Reset Chart View Button -->
+        <button class="tv-reset-view-btn" id="btnResetView_TF2" title="Reset chart view (Alt+R)">
+          <svg viewBox="0 0 18 18" width="13" height="13"><path fill="currentColor" d="M9 3a6 6 0 1 0 6 6h-1.5A4.5 4.5 0 1 1 9 4.5V7l4-3.5L9 0v3z"/></svg>
+        </button>
+        <div class="resizer-horz" id="resizerTF2_1" title="Kéo để chỉnh độ cao chart TF2 / Stoch"><div class="resizer-grip"></div></div>
+        <div class="sub-pane" id="subChartStoch_TF2" style="height:70px;"></div>
+        <div class="resizer-horz" id="resizerTF2_2" title="Kéo để chỉnh độ cao Stoch / RSI"><div class="resizer-grip"></div></div>
+        <div class="sub-pane" id="subChartRSI_TF2" style="height:70px;"></div>
+        <div class="resizer-horz" id="resizerTF2_3" title="Kéo để chỉnh độ cao RSI / MACD"><div class="resizer-grip"></div></div>
+        <div class="sub-pane" id="subChartMACD_TF2" style="height:70px;"></div>
+      </div>
+
+      <!-- M15 / TF3 Lower Timeframe Chart Pane (Main Action) -->
+      <div class="chart-pane" id="paneM15">
+        
+        <!-- Copilot Divergence Signal Banner -->
+        <div id="copilotBanner" style="display:none;position:absolute;top:38px;left:12px;right:12px;z-index:15;background:rgba(26,30,41,0.92);backdrop-filter:blur(8px);border:1px solid var(--border-active);border-radius:var(--radius-md);padding:6px 12px;justify-content:space-between;align-items:center;">
+        </div>
+
+        <!-- 5s Pause & Audio Bell Live Overlay Notification -->
+        <div id="radarPauseOverlay" style="display:none;position:absolute;top:70px;left:50%;transform:translateX(-50%);z-index:30;background:linear-gradient(135deg, rgba(17,24,39,0.95) 0%, rgba(30,27,75,0.95) 100%);backdrop-filter:blur(12px);border:2px solid var(--color-purple);border-radius:12px;padding:12px 24px;box-shadow:0 10px 25px -5px rgba(0,0,0,0.7), 0 0 20px rgba(168,85,247,0.4);text-align:center;min-width:320px;animation:pulse 1s infinite alternate;">
+          <div style="font-size:14px;font-weight:700;color:var(--color-purple);display:flex;align-items:center;justify-content:center;gap:8px;" id="pauseOverlayTitle">
+            <span>⚡ RADAR SIGNAL DETECTED</span>
+          </div>
+          <div style="font-size:13px;color:#e2e8f0;margin:6px 0;" id="pauseOverlayDesc">
+            Vào lệnh BUY GU | SL: 1.2000 | TP1: 1.2100 (1:2) | TP2: 1.2150 (1:3)
+          </div>
+          <div style="display:inline-block;padding:4px 14px;background:rgba(168,85,247,0.2);border:1px solid var(--color-purple);border-radius:20px;font-size:13px;font-weight:700;color:#38bdf8;" id="pauseOverlayTimer">
+            ⏱️ Tạm dừng: 5.0s
+          </div>
+        </div>
+
+
+        <div class="chart-header">
+          <div class="chart-title">
+            <span id="titleTF3">Execution Timeframe</span>
+            <span class="timeframe-badge" id="badgeTF3" style="background:var(--color-purple);">M15</span>
+            <span class="tf-countdown" id="countdownTF3" title="Đếm ngược đóng nến khung TF3" style="font-size:10px;font-family:var(--font-mono);color:#fbbf24;background:rgba(245,158,11,0.12);padding:1px 5px;border-radius:3px;"></span>
+            <button class="btn-chart-fit" id="btnFitTF3" title="Fit & Reset tỷ lệ khung này">⤢ Fit</button>
+          </div>
+          <div class="chart-ohlc" id="ohlcM15">
+            <span>O: --</span> <span>H: --</span> <span>L: --</span> <span>C: --</span>
+          </div>
+        </div>
+
+        <!-- Non-Lookahead Probabilistic Context Forecast Ribbon (% UP / % SIDEWAY / % DOWN) -->
+        <div id="probContextBar" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 12px;background:rgba(15,23,42,0.95);border-bottom:1px solid rgba(56,189,248,0.25);font-size:11px;font-family:var(--font-mono);z-index:18;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-weight:700;color:#38bdf8;">⚓ Combined:</span>
+            <span id="probUpText" style="color:#10b981;font-weight:700;">🟢 UP 33.3%</span>
+            <span style="color:#475569;">|</span>
+            <span id="probSidewayText" style="color:#94a3b8;font-weight:600;">⚪ SW 33.4%</span>
+            <span style="color:#475569;">|</span>
+            <span id="probDownText" style="color:#ef4444;font-weight:700;">🔴 DN 33.3%</span>
+          </div>
+          <div style="flex:1;min-width:90px;max-width:150px;height:7px;background:#1e293b;border-radius:4px;overflow:hidden;display:flex;">
+            <div id="probBarUp" style="width:33.3%;background:#10b981;transition:width 0.2s;"></div>
+            <div id="probBarSideway" style="width:33.4%;background:#64748b;transition:width 0.2s;"></div>
+            <div id="probBarDown" style="width:33.3%;background:#ef4444;transition:width 0.2s;"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;color:#cbd5e1;">
+            <span id="probTacticalBadge" style="padding:2px 8px;border-radius:4px;font-weight:700;font-size:10px;background:rgba(56,189,248,0.18);color:#38bdf8;">⚓ ĐANG ĐỒNG BỘ HTF+LTF</span>
+            <span id="probTrustBadge" title="Nhấp để mở Bảng Điểm Độ Chính Xác 3-Trong-1 & Tự Học Champion vs Challenger" style="padding:2px 8px;border-radius:4px;font-weight:700;font-size:10px;background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);cursor:pointer;">🎯 Trust: 75/100 (v3.0)</span>
+            <span id="probSessionBadge" style="padding:2px 7px;border-radius:4px;font-weight:600;font-size:10px;background:rgba(245,158,11,0.15);color:#fbbf24;">🕒 Phiên Giao Dịch</span>
+            <span>Wave: <b id="probExpWave" style="color:#f59e0b;">1.50 ATR</b></span>
+            <span id="probActionBadge" style="padding:2px 7px;border-radius:4px;font-weight:700;font-size:10px;background:rgba(148,163,184,0.2);color:#e2e8f0;">NEUTRAL</span>
+          </div>
+        </div>
+        
+        <div class="chart-canvas" id="chartM15"></div>
+        
+        <!-- Simple DCA Basket Radar HUD Panel -->
+        <div id="basketRadarHud" style="display:none;position:absolute;top:40px;right:14px;z-index:25;background:rgba(18,21,28,0.92);backdrop-filter:blur(10px);border:1px solid #38bdf8;border-radius:10px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,0.7);min-width:260px;font-family:var(--font-sans);">
+          <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border-color);padding-bottom:6px;margin-bottom:8px;">
+            <span style="font-size:12px;font-weight:700;color:#38bdf8;display:flex;align-items:center;gap:6px;">
+              <span>🤖</span> <span id="radarPresetName">Simple DCA v1.41</span>
+            </span>
+            <span id="radarEABadge" style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:rgba(16,185,129,0.2);color:#10b981;">AUTO</span>
+          </div>
+          
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;">
+            <div style="background:rgba(255,255,255,0.03);padding:6px;border-radius:6px;">
+              <div style="color:var(--text-dim);font-size:9px;text-transform:uppercase;">Buy Basket</div>
+              <div id="radarBuyTiers" style="font-weight:700;color:var(--color-bull);margin-top:2px;">Tiers: 0/4</div>
+              <div id="radarBuyBe" style="color:var(--text-muted);font-size:10px;font-family:var(--font-mono);">BE: --</div>
+              <div id="radarBuyTp" style="color:#10b981;font-size:10px;font-family:var(--font-mono);">TP: --</div>
+            </div>
+            
+            <div style="background:rgba(255,255,255,0.03);padding:6px;border-radius:6px;">
+              <div style="color:var(--text-dim);font-size:9px;text-transform:uppercase;">Sell Basket</div>
+              <div id="radarSellTiers" style="font-weight:700;color:var(--color-bear);margin-top:2px;">Tiers: 0/4</div>
+              <div id="radarSellBe" style="color:var(--text-muted);font-size:10px;font-family:var(--font-mono);">BE: --</div>
+              <div id="radarSellTp" style="color:#10b981;font-size:10px;font-family:var(--font-mono);">TP: --</div>
+            </div>
+          </div>
+          
+          <div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.05);display:flex;justify-content:space-between;align-items:center;font-size:11px;">
+            <span style="color:var(--text-dim);">Floating PnL:</span>
+            <span id="radarFloatingPnl" style="font-family:var(--font-mono);font-weight:700;color:#f1f5f9;">$0.00</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--text-dim);margin-top:3px;">
+            <span>Cycles: <b id="radarCycles" style="color:#38bdf8;">0</b></span>
+            <span>Cuts: <b id="radarCuts" style="color:#f23645;">0</b> (<span id="radarCutLoss">$0.00</span>)</span>
+          </div>
+        </div>
+
+        <!-- Floating P&L Live Bottom-Right Badge -->
+        <div id="floatingPnlBadge" style="position:absolute;bottom:12px;right:75px;z-index:20;background:rgba(15,23,42,0.9);backdrop-filter:blur(10px);border:1px solid var(--border-active);border-radius:var(--radius-md);padding:6px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 24px rgba(0,0,0,0.6);">
+          <div style="display:flex;flex-direction:column;">
+            <span style="font-size:9px;text-transform:uppercase;color:var(--text-dim);letter-spacing:0.5px;">Floating P&L</span>
+            <span id="floatingPnlVal" style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--text-muted);">$0.00 (0.0p)</span>
+          </div>
+          <div style="height:20px;width:1px;background:var(--border-color);"></div>
+          <div style="display:flex;flex-direction:column;">
+            <span style="font-size:9px;text-transform:uppercase;color:var(--text-dim);letter-spacing:0.5px;">Vị Thế Mở</span>
+            <span id="floatingPosCount" style="font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--text-main);">0 Lệnh (0.00L)</span>
+          </div>
+        </div>
+
+        <!-- Floating Reset Chart View Button -->
+        <button class="tv-reset-view-btn" id="btnResetView_M15" title="Reset chart view (Alt+R)">
+          <svg viewBox="0 0 18 18" width="13" height="13"><path fill="currentColor" d="M9 3a6 6 0 1 0 6 6h-1.5A4.5 4.5 0 1 1 9 4.5V7l4-3.5L9 0v3z"/></svg>
+        </button>
+
+        <div class="resizer-horz" id="resizerM15_1" title="Kéo để chỉnh độ cao chart M15 / Stoch"><div class="resizer-grip"></div></div>
+        <div class="sub-pane" id="subChartStoch" style="height:70px;"></div>
+        <div class="resizer-horz" id="resizerM15_2" title="Kéo để chỉnh độ cao Stoch / RSI"><div class="resizer-grip"></div></div>
+        <div class="sub-pane" id="subChartRSI" style="height:70px;"></div>
+        <div class="resizer-horz" id="resizerM15_3" title="Kéo để chỉnh độ cao RSI / MACD"><div class="resizer-grip"></div></div>
+        <div class="sub-pane" id="subChartMACD" style="height:70px;"></div>
+      </div>
+
+
+    </div>
+
+    <!-- Floating Edge Toggle Handle for Sidebar -->
+    <button class="sidebar-edge-toggle collapsed-handle" id="btnEdgeToggleSidebar" title="Mở rộng bảng lệnh & Cấu hình Backtest (Ctrl+B)">❮</button>
+
+    <!-- RIGHT SIDEBAR: BACKTEST CONFIG, ORDER PANEL & ACTIVE POSITIONS (Collapsed by default) -->
+    <aside class="trade-sidebar collapsed">
+      <!-- Backtest Configuration Controls (Tucked inside Sidebar) -->
+      <div style="display:flex;gap:5px;padding:8px 10px;background:rgba(15,23,42,0.85);border-bottom:1px solid var(--border-color);flex-wrap:wrap;">
+        <button class="btn-header" id="btnOpenResetModal" title="Cấu hình chế độ Backtest (Vốn, Risk %, Điểm bắt đầu)" style="flex:1;justify-content:center;border-color:#ec4899;color:#ec4899;font-size:11px;padding:4px 6px;">
+          <span>⚙️ Cấu Hình Backtest</span>
+        </button>
+        <button class="btn-header" id="btnJump2000" title="Nhảy về ngày khởi đầu năm 2000" style="font-size:11px;padding:4px 6px;">
+          <span>📅 2000</span>
+        </button>
+        <label class="btn-header" style="cursor:pointer;margin:0;font-size:11px;padding:4px 6px;" title="Nhập dữ liệu CSV từ MT5">
+          <span>📂 CSV</span>
+          <input type="file" id="fileCsvInput" accept=".csv,.txt" style="display:none;">
+        </label>
+      </div>
+      <div class="sidebar-tabs">
+        <div class="sidebar-tab active" data-tab="positions">Lệnh Mở <span id="countPositions"></span></div>
+        <div class="sidebar-tab" data-tab="pending">Lệnh Chờ <span id="countPending"></span></div>
+        <div class="sidebar-tab" data-tab="history">Lịch Sử</div>
+      </div>
+
+      <div class="sidebar-content">
+        
+        <!-- ORDER ENTRY BOX -->
+        <div class="order-box">
+          
+          <!-- Order Type -->
+          <div class="order-row">
+            <span class="order-label">Loại lệnh:</span>
+            <select class="custom-select" id="orderTypeSelect" style="width:130px;">
+              <option value="MARKET">Market Execution</option>
+              <option value="BUY_LIMIT">Buy Limit</option>
+              <option value="BUY_STOP">Buy Stop</option>
+              <option value="SELL_LIMIT">Sell Limit</option>
+              <option value="SELL_STOP">Sell Stop</option>
+            </select>
+          </div>
+
+          <!-- Pending Price (Hidden by default) -->
+          <div class="order-row" id="pendingPriceRow" style="display:none;">
+            <span class="order-label" style="color:var(--color-warning);">Giá chờ (Price):</span>
+            <input type="number" class="input-num" id="inputPendingPrice" placeholder="Giá đặt chờ" step="0.01">
+          </div>
+
+          <!-- Risk Amount in USD -->
+          <div class="order-row">
+            <span class="order-label">Rủi ro (Risk $):</span>
+            <input type="number" class="input-num" id="inputRiskUsd" placeholder="Tự tính Vol ($)" step="10">
+          </div>
+
+          <!-- Volume / Lots -->
+          <div class="order-row">
+            <span class="order-label">Khối lượng (Lots):</span>
+            <input type="number" class="input-num" id="inputLots" value="0.10" step="0.01" min="0.01">
+          </div>
+
+          <!-- Stop Loss -->
+          <div class="order-row">
+            <span class="order-label">Stop Loss (SL):</span>
+            <input type="number" class="input-num" id="inputSL" placeholder="Mức giá SL" step="0.01">
+          </div>
+
+          <!-- Take Profit + RR Buttons -->
+          <div class="order-row">
+            <span class="order-label">Take Profit (TP):</span>
+            <input type="number" class="input-num" id="inputTP" placeholder="Mức giá TP" step="0.01">
+          </div>
+          
+          <!-- Quick RR TP Buttons -->
+          <div class="rr-buttons-wrapper">
+            <button class="btn-rr" data-rr="1.0">R:R 1:1</button>
+            <button class="btn-rr" data-rr="1.5">R:R 1:1.5</button>
+            <button class="btn-rr" data-rr="2.0">R:R 1:2</button>
+            <button class="btn-rr" data-rr="3.0">R:R 1:3</button>
+          </div>
+
+          <!-- Split Multiple Positions -->
+          <div class="order-row" style="margin-top:2px;">
+            <span class="order-label">Chia vị thế (Positions):</span>
+            <select class="custom-select" id="inputNumPositions" style="width:130px;">
+              <option value="1">1 lệnh duy nhất</option>
+              <option value="2">2 lệnh (TP 1:1 & 1:2)</option>
+              <option value="3">3 lệnh (TP 1:1, 1:2, 1:3)</option>
+              <option value="4">4 lệnh (Scale out)</option>
+            </select>
+          </div>
+
+          <!-- BUY / SELL BUTTONS -->
+          <div class="btn-group-exec">
+            <button class="btn-buy" id="btnBuy">
+              <span>BUY MARKET</span>
+              <span class="btn-sub-price" id="buyPriceLabel">--</span>
+            </button>
+            <button class="btn-sell" id="btnSell">
+              <span>SELL MARKET</span>
+              <span class="btn-sub-price" id="sellPriceLabel">--</span>
+            </button>
+          </div>
+
+          <button class="btn-header" id="btnCloseAll" style="width:100%;justify-content:center;margin-top:2px;color:var(--color-bear);">
+            <span>🛑 Đóng tất cả lệnh (Close All)</span>
+          </button>
+        </div>
+
+        <!-- TAB CONTENT: POSITIONS LIST -->
+        <div id="tabPositions" class="positions-container">
+          <!-- Injected via trade_panel.js -->
+        </div>
+
+        <!-- TAB CONTENT: PENDING LIST -->
+        <div id="tabPending" class="positions-container" style="display:none;">
+          <!-- Injected via trade_panel.js -->
+        </div>
+
+        <!-- TAB CONTENT: HISTORY LIST -->
+        <div id="tabHistory" class="positions-container" style="display:none;">
+          <!-- Injected via trade_panel.js -->
+        </div>
+
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- ================= BOTTOM REPLAY CONTROLLER ================= -->
+  <footer class="replay-bar">
+    <div class="replay-controls">
+      <button class="btn-ctl" id="btnStepBack" title="Lùi 1 nến (Phím: Mũi tên trái)">⏮</button>
+      <button class="btn-ctl" id="btnPlay" title="Phát / Tạm dừng (Phím: Space)">▶</button>
+      <button class="btn-ctl" id="btnStepForward" title="Tiến 1 nến (Phím: Mũi tên phải)">⏭</button>
+
+      <!-- Speed Control (Max 50x) -->
+      <div class="speed-control">
+        <span class="speed-label" id="speedDisplay">5x</span>
+        <input type="range" class="speed-slider" id="speedSlider" min="1" max="50" value="5">
+      </div>
+
+    </div>
+
+    <!-- Progress Scrubber -->
+    <div class="progress-wrapper">
+      <div class="progress-bar-bg" id="progressBarBg" title="Nhấp vào để nhảy đến thời điểm bất kỳ">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="bar-counter" id="barCounter">0 / 0</div>
+    </div>
+
+    <!-- Pick Custom Start Date & Current Date Display -->
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="date-indicator-wrapper" title="Chọn thời gian bắt đầu test">
+        <span style="font-size:12px;">📅</span>
+        <input type="datetime-local" class="input-datetime" id="inputCustomDate">
+      </div>
+      <div style="font-size:10px;color:var(--text-dim);">
+        <kbd style="background:var(--bg-card);padding:2px 4px;border-radius:3px;border:1px solid var(--border-color);">Space</kbd> Play &nbsp;
+        <kbd style="background:var(--bg-card);padding:2px 4px;border-radius:3px;border:1px solid var(--border-color);">➔</kbd> Step &nbsp;
+        <kbd style="background:var(--bg-card);padding:2px 4px;border-radius:3px;border:1px solid var(--border-color);">R</kbd> Center
+      </div>
+    </div>
+  </footer>
+
+  <!-- ================= MODAL: TRADINGVIEW STYLE SYMBOL SEARCH & MT5 AUTO-ADD ================= -->
+  <div class="modal-overlay" id="symbolSearchModal">
+    <div class="modal-container" style="width: 720px; max-width: 95vw; max-height: 88vh; display:flex; flex-direction:column;">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding: 12px 18px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:18px;">🔍</span>
+          <h3 style="margin:0; font-size:15px; font-weight:700;">Tìm Kiếm Cặp Tiền & Tự Động Thêm Vào MT5</h3>
+        </div>
+        <button class="btn-close-modal" id="btnCloseSymbolSearch">&times;</button>
+      </div>
+
+      <!-- Search Input Bar -->
+      <div style="padding: 12px 18px; background: rgba(15,23,42,0.6); border-bottom: 1px solid var(--border-color); display:flex; gap:10px; align-items:center;">
+        <input type="text" id="symbolModalSearchInput" placeholder="🔍 Nhập mã cặp tiền, Vàng, Chỉ số (VD: AUDUSD, US30, NAS100, XAGUSD, SOLUSD, CADJPY...)" style="flex:1; padding:9px 14px; background:#1e293b; border:1px solid #38bdf8; border-radius:6px; color:#f8fafc; font-size:13px; font-weight:600;">
+        <button class="btn-header" id="btnManualAddSymbol" style="background:#10b981; color:#fff; border:none; padding:9px 14px; font-weight:700; border-radius:6px; cursor:pointer;" title="Nạp trực tiếp mã bất kỳ từ sàn MT5">
+          + Nạp từ MT5
+        </button>
+      </div>
+
+      <!-- Category Filter Tabs -->
+      <div style="padding: 8px 18px; background: rgba(30,41,59,0.5); border-bottom: 1px solid var(--border-color); display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <span style="font-size:11px; color:var(--text-dim); font-weight:600;">Phân loại:</span>
+        <button class="btn-header active" id="tabSymAll" style="padding:3px 9px; font-size:11px;">Tất Cả</button>
+        <button class="btn-header" id="tabSymForex" style="padding:3px 9px; font-size:11px;">Forex</button>
+        <button class="btn-header" id="tabSymMetals" style="padding:3px 9px; font-size:11px;">Kim Loại & Vàng</button>
+        <button class="btn-header" id="tabSymIndices" style="padding:3px 9px; font-size:11px;">Chỉ Số (Indices)</button>
+        <button class="btn-header" id="tabSymCrypto" style="padding:3px 9px; font-size:11px;">Crypto</button>
+      </div>
+
+      <!-- Results Count Info -->
+      <div style="padding: 6px 18px; background: rgba(15,23,42,0.4); border-bottom: 1px solid rgba(255,255,255,0.05); font-size:11px; color:#94a3b8; display:flex; justify-content:space-between;">
+        <span id="symbolModalCountText">Đang tải danh sách từ MT5...</span>
+        <span style="color:#38bdf8;">⚡ Tự động tìm kiếm & thêm vào MT5 Market Watch</span>
+      </div>
+
+      <!-- Symbols Results List -->
+      <div class="modal-body" id="symbolModalResultsList" style="padding:8px 14px; max-height:55vh; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
+        <!-- Rows injected dynamically via JS -->
+      </div>
+
+      <div class="modal-footer" style="padding:10px 18px; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:11px; color:var(--text-dim);">* Khi bạn chọn một cặp, hệ thống tự động gọi <code>symbol_select(symbol, True)</code> để kích hoạt trên MT5.</span>
+        <button class="btn-modal-action primary" id="btnCloseSymbolSearchFooter">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: INDICATORS SETTINGS (TRADINGVIEW STYLE) ================= -->
+  <div class="modal-overlay" id="indicatorModal">
+    <div class="modal-container" style="width: 680px; max-height: 88vh;">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding: 12px 18px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:18px;">📊</span>
+          <h3 style="margin:0; font-size:15px; font-weight:700;">Indicators, Metrics & Strategies</h3>
+        </div>
+        <button class="btn-close-modal" id="btnCloseIndicators">&times;</button>
+      </div>
+
+      <!-- TradingView Style Search & Tabs -->
+      <div style="padding: 10px 18px; background: rgba(15,23,42,0.6); border-bottom: 1px solid var(--border-color); display:flex; gap:10px; align-items:center;">
+        <input type="text" id="indicatorSearchInput" placeholder="🔍 Tìm kiếm chỉ báo (EMA, SMA, BB, RSI, MACD, Supertrend, VWAP...)" style="flex:1; padding:7px 12px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#f8fafc; font-size:12px;">
+        <div style="display:flex; gap:4px;">
+          <button class="btn-header active" id="tabBtnActiveIndicators" style="padding:5px 10px; font-size:11px;">Đang Dùng</button>
+          <button class="btn-header" id="tabBtnCatalogIndicators" style="padding:5px 10px; font-size:11px;">+ Thư Viện</button>
+        </div>
+      </div>
+
+      <!-- TradingView Style Presets Quick Bar -->
+      <div style="padding: 7px 18px; background: rgba(30,41,59,0.5); border-bottom: 1px solid var(--border-color); display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <span style="font-size:11px; color:var(--text-dim); font-weight:600;">⚡ Mẫu Nhanh:</span>
+        <button class="btn-header" id="btnPresetTF1Only" style="padding:4px 10px; font-size:11px; background:rgba(56,189,248,0.15); border-color:#38bdf8; color:#38bdf8; font-weight:700;">
+          🎯 Nạp Bộ Chỉ Báo TF1 (EMA 21/50/200, BB, RSI, Stoch, Div)
+        </button>
+        <button class="btn-header" id="btnPresetAll3Charts" style="padding:4px 10px; font-size:11px; background:rgba(16,185,129,0.15); border-color:#10b981; color:#10b981; font-weight:700;">
+          🚀 Nạp Chuẩn Cả 3 Khung (21 Chỉ Báo)
+        </button>
+      </div>
+
+      <!-- Quick Add New Indicator Bar -->
+      <div id="quickAddIndicatorBar" style="display:none; padding:10px 18px; background:rgba(30,41,59,0.7); border-bottom:1px solid var(--border-color); font-size:12px;">
+        <div style="font-weight:700; color:#38bdf8; margin-bottom:6px;">Thêm Chỉ Báo Mới:</div>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <select id="quickAddType" style="padding:4px 8px; background:#0f172a; border:1px solid #38bdf8; color:#fff; border-radius:4px;">
+            <option value="EMA">EMA (Moving Average Exponential)</option>
+            <option value="SMA">SMA (Simple Moving Average)</option>
+            <option value="BB">Bollinger Bands (BB)</option>
+            <option value="SUPERTREND">SuperTrend (Trend)</option>
+            <option value="VWAP">VWAP (Volume Weighted)</option>
+            <option value="RSI">RSI (Relative Strength Index)</option>
+            <option value="STOCH">Stochastic Oscillator</option>
+            <option value="MACD">MACD</option>
+            <option value="ATR">ATR (Average True Range)</option>
+            <option value="OB">Order Blocks / Key Levels</option>
+          </select>
+
+          <span style="color:var(--text-dim);">Chart:</span>
+          <select id="quickAddTargetChart" style="padding:4px 8px; background:#0f172a; border:1px solid #38bdf8; color:#38bdf8; border-radius:4px; font-weight:700;">
+            <option value="TF1">Khung 1 (HTF)</option>
+            <option value="TF2">Khung 2 (MTF)</option>
+            <option value="TF3" selected>Khung 3 (LTF)</option>
+            <option value="ALL">Cả 3 Khung</option>
+          </select>
+
+          <span style="color:var(--text-dim);">Chu kỳ:</span>
+          <input type="number" id="quickAddPeriod" value="21" style="width:55px; padding:4px 6px; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:4px;">
+
+          <span style="color:var(--text-dim);">Màu:</span>
+          <input type="color" id="quickAddColor" value="#00e676" style="width:30px; height:26px; border:none; background:transparent; cursor:pointer;">
+
+          <button id="btnConfirmAddIndicator" class="btn-header" style="background:#10b981; color:#fff; font-weight:700; padding:5px 12px; border:none; border-radius:4px; cursor:pointer;">
+            + Thêm
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-body" id="indicatorList" style="padding:14px 18px; max-height:55vh; overflow-y:auto;">
+        <!-- Injected via indicators.js -->
+      </div>
+      <div class="modal-footer" style="padding:10px 18px; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:11px; color:var(--text-dim);">* Thay đổi được áp dụng ngay lập tức trên 3 biểu đồ.</span>
+        <button class="btn-modal-action primary" id="btnSaveIndicators">Áp dụng & Lưu Template</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: TRADINGVIEW-STYLE INDICATOR SETTINGS ================= -->
+  <div class="modal-overlay" id="indSettingsModal" style="z-index: 2200;">
+    <div class="modal-container tv-settings-modal">
+      <div class="modal-header tv-settings-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:16px;">⚙️</span>
+          <h3 id="indSettingsTitle" style="margin:0; font-size:14px; font-weight:700; color:#f8fafc;">Indicator Settings</h3>
+          <span id="indSettingsTfBadge" class="tv-settings-tf-badge">TF1</span>
+        </div>
+        <button class="btn-close-modal" id="btnCloseIndSettings">&times;</button>
+      </div>
+
+      <!-- TradingView Tabs: Inputs | Style -->
+      <div class="tv-settings-tabs">
+        <button class="tv-tab-btn active" id="tvTabInputs">Inputs</button>
+        <button class="tv-tab-btn" id="tvTabStyle">Style</button>
+      </div>
+
+      <!-- Tab Content Body -->
+      <div class="tv-settings-body">
+        <div id="tvPanelInputs" class="tv-tab-panel active">
+          <!-- Injected dynamically based on indicator type -->
+        </div>
+        <div id="tvPanelStyle" class="tv-tab-panel">
+          <!-- Injected dynamically based on indicator type -->
+        </div>
+      </div>
+
+      <!-- Footer: Defaults | Cancel | OK -->
+      <div class="tv-settings-footer">
+        <button class="btn-header" id="btnIndSettingsReset" title="Khôi phục thông số mặc định chuẩn TradingView">↺ Defaults</button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-header" id="btnIndSettingsCancel">Cancel</button>
+          <button class="btn-modal-action primary" id="btnIndSettingsOk" style="padding:6px 18px;">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: 4-PILLAR MTF DASHBOARD SETTINGS ================= -->
+  <div class="modal-overlay" id="dashSettingsModal" style="z-index: 2250;">
+    <div class="modal-container tv-settings-modal">
+      <div class="modal-header tv-settings-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:16px;">📊</span>
+          <h3 style="margin:0; font-size:14px; font-weight:700; color:#f8fafc;">4-Pillar MTF Dashboard Settings</h3>
+          <span class="tv-settings-tf-badge">HTF HUD</span>
+        </div>
+        <button class="btn-close-modal" id="btnCloseDashSettings">&times;</button>
+      </div>
+
+      <div class="tv-settings-body" style="display:flex; flex-direction:column; gap:14px;">
+        <div class="tv-setting-row">
+          <span class="tv-setting-label">Hiển thị Dashboard trên Chart</span>
+          <input type="checkbox" id="dashCfg_visible" checked style="width:18px;height:18px;cursor:pointer;">
+        </div>
+        <div class="tv-setting-row">
+          <span class="tv-setting-label">Thu gọn thành 1 dòng (Compact)</span>
+          <input type="checkbox" id="dashCfg_collapsed" style="width:18px;height:18px;cursor:pointer;">
+        </div>
+        <div class="tv-setting-row">
+          <span class="tv-setting-label">Vị trí (Position)</span>
+          <select id="dashCfg_position" class="tv-select">
+            <option value="top-left">Top-Left (Dưới Legend)</option>
+            <option value="top-right">Top-Right (Góc trên phải)</option>
+            <option value="bottom-left">Bottom-Left (Góc dưới trái)</option>
+            <option value="bottom-right">Bottom-Right (Góc dưới phải)</option>
+            <option value="custom">Custom (Kéo thả tự do)</option>
+          </select>
+        </div>
+        <div class="tv-setting-row">
+          <span class="tv-setting-label">Kích thước chữ (Size)</span>
+          <select id="dashCfg_size" class="tv-select">
+            <option value="tiny">Tiny (Siêu nhỏ)</option>
+            <option value="small" selected>Small (Nhỏ - Chuẩn TV)</option>
+            <option value="normal">Normal (Lớn)</option>
+          </select>
+        </div>
+        <div class="tv-setting-row">
+          <span class="tv-setting-label">Độ mờ nền (Opacity: <b id="dashCfg_opacityVal">92%</b>)</span>
+          <input type="range" id="dashCfg_opacity" min="35" max="100" value="92" style="width:130px;cursor:pointer;">
+        </div>
+        <div class="tv-setting-row">
+          <span class="tv-setting-label">Hiển thị dòng RADAR 15M</span>
+          <input type="checkbox" id="dashCfg_showRadar" checked style="width:18px;height:18px;cursor:pointer;">
+        </div>
+        <div class="tv-setting-row">
+          <span class="tv-setting-label">Hiển thị dòng Summary Votes</span>
+          <input type="checkbox" id="dashCfg_showFooter" checked style="width:18px;height:18px;cursor:pointer;">
+        </div>
+      </div>
+
+      <div class="tv-settings-footer">
+        <button class="btn-header" id="btnDashSettingsReset">↺ Reset Default</button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-header" id="btnDashSettingsCancel">Cancel</button>
+          <button class="btn-modal-action primary" id="btnDashSettingsOk" style="padding:6px 18px;">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: TRADINGVIEW-STYLE SCRIPT EDITOR ================= -->
+  <div class="modal-overlay" id="scriptEditorModal" style="z-index: 2300;">
+    <div class="modal-container tv-script-editor-modal">
+      <div class="modal-header tv-settings-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:16px;">📝</span>
+          <h3 style="margin:0; font-size:14px; font-weight:700; color:#f8fafc;">Custom Script Editor (Pine-Style Local)</h3>
+          <span class="tv-settings-tf-badge" style="color:#d8b4fe;border-color:rgba(168,85,247,0.5);background:rgba(168,85,247,0.15);">ta.* + plot() + marker()</span>
+        </div>
+        <button class="btn-close-modal" id="btnCloseScriptEditor">&times;</button>
+      </div>
+
+      <!-- Top Bar: Saved Scripts, Starters, Target TF -->
+      <div class="tv-script-toolbar">
+        <select id="scriptSavedSelect" class="tv-select" style="min-width:155px;" title="Chọn script đã lưu">
+          <option value="">📂 Script đã lưu...</option>
+        </select>
+        <input type="text" id="scriptNameInput" class="tv-input-num" style="width:155px;" placeholder="Tên script (vd: ema_cross)" value="my_ema_cross">
+        <select id="scriptTargetTf" class="tv-select" style="min-width:125px;" title="Áp dụng lên khung nào">
+          <option value="TF3">Khung 3 (M15/LTF)</option>
+          <option value="TF2">Khung 2 (H1/MTF)</option>
+          <option value="TF1">Khung 1 (H4/HTF)</option>
+          <option value="ALL" selected>Cả 3 Khung (ALL)</option>
+        </select>
+        <select id="scriptStarterSelect" class="tv-select" style="min-width:145px;" title="Nạp code mẫu nhanh">
+          <option value="">✨ Nạp Code Mẫu...</option>
+          <option value="ema_cross">EMA 9/21 Cross + Mũi tên</option>
+          <option value="donchian">Donchian Channel (20)</option>
+          <option value="rsi_signal">RSI 14 Extreme Signals</option>
+        </select>
+        <button class="btn-header" id="btnDeleteScript" title="Xóa script đang chọn" style="color:#fca5a5;border-color:rgba(239,68,68,0.45);">🗑️</button>
+      </div>
+
+      <!-- Cheatsheet Hint -->
+      <div class="tv-script-hint">
+        Biến có sẵn: <code>close, open, high, low, volume, times</code> | Hàm chuẩn TradingView: <code>ta.ema(close, 20)</code>, <code>ta.sma</code>, <code>ta.wma</code>, <code>ta.rsi</code>, <code>ta.highest</code>, <code>ta.lowest</code>, <code>ta.crossover(a, b)</code> | Vẽ: <code>plot("Ten", arr, color="#38bdf8", width=2)</code>, <code>marker(i, "BUY", "#10b981", "belowBar", "arrowUp")</code>
+      </div>
+
+      <!-- Code Textarea -->
+      <div class="tv-script-code-wrap">
+        <textarea id="scriptCodeArea" class="tv-script-textarea" spellcheck="false"></textarea>
+      </div>
+
+      <!-- Console Output -->
+      <div id="scriptConsoleOutput" class="tv-script-console">Sẵn sàng. Bấm "▶ Add to Chart" để chạy và vẽ trực tiếp lên biểu đồ!</div>
+
+      <!-- Footer -->
+      <div class="tv-settings-footer">
+        <button class="btn-header" id="btnSaveScriptOnly">💾 Lưu Script</button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-header" id="btnCancelScriptEditor">Đóng</button>
+          <button class="btn-modal-action primary" id="btnRunAddScript" style="padding:6px 18px;background:#2962ff;">▶ Add to Chart</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: MANAGE / HIDE-SHOW SYMBOL LIST ================= -->
+  <div class="modal-overlay" id="symbolManageModal" style="z-index: 2350;">
+    <div class="modal-container tv-settings-modal" style="width: 480px !important;">
+      <div class="modal-header tv-settings-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:16px;">✏️</span>
+          <h3 style="margin:0; font-size:14px; font-weight:700; color:#f8fafc;">Quản Lý Danh Sách Cặp Giao Dịch</h3>
+        </div>
+        <button class="btn-close-modal" id="btnCloseSymbolManage">&times;</button>
+      </div>
+      <div style="padding:10px 16px;background:#181c26;border-bottom:1px solid #2a2e39;">
+        <input type="text" id="symbolManageSearch" placeholder="🔍 Lọc nhanh cặp tiền (NAS100, USTEC, XAUUSD, EURUSD...)" style="width:100%;padding:7px 10px;background:#131722;border:1px solid #363a45;border-radius:5px;color:#f8fafc;font-size:12px;">
+      </div>
+      <div id="symbolManageList" style="padding:10px 16px;max-height:48vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
+        <!-- Injected via app.js -->
+      </div>
+      <div class="tv-settings-footer">
+        <button class="btn-header" id="btnSymbolManageShowAll">👁️ Hiện Tất Cả</button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-header" id="btnCancelSymbolManage">Hủy</button>
+          <button class="btn-modal-action primary" id="btnSaveSymbolManage" style="padding:6px 18px;">Lưu Danh Sách</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: DETAILED STATS REPORT ================= -->
+  <div class="modal-overlay" id="statsModal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3>📈 Báo Cáo Hiệu Suất Backtest (Performance Report)</h3>
+        <button class="btn-close-modal" id="btnCloseStats">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="order-box">
+            <span class="order-label">Tổng số lệnh:</span>
+            <span class="metric-value" id="statTotalTrades" style="font-size:16px;">0</span>
+          </div>
+          <div class="order-box">
+            <span class="order-label">Win Rate:</span>
+            <span class="metric-value bull" id="statWinRate" style="font-size:16px;">0%</span>
+          </div>
+          <div class="order-box">
+            <span class="order-label">Profit Factor:</span>
+            <span class="metric-value" id="statProfitFactor" style="font-size:16px;">0.0</span>
+          </div>
+          <div class="order-box">
+            <span class="order-label">Max Drawdown:</span>
+            <span class="metric-value bear" id="statMaxDD" style="font-size:16px;">0.0%</span>
+          </div>
+          <div class="order-box">
+            <span class="order-label">Lợi Nhuận Ròng (Net Profit):</span>
+            <span class="metric-value bull" id="statNetProfit" style="font-size:16px;">$0.00</span>
+          </div>
+          <div class="order-box">
+            <span class="order-label">Tổng Số Pips Đạt Được:</span>
+            <span class="metric-value" id="statTotalPips" style="font-size:16px;">0 pips</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-modal-action" onclick="document.getElementById('statsModal').classList.remove('open')">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: BACKTEST RESET & RISK CONFIG ================= -->
+  <div class="modal-overlay" id="resetBacktestModal">
+    <div class="modal-container" style="max-width: 540px;">
+      <div class="modal-header">
+        <h3>⚙️ Cấu Hình Chế Độ Backtest (Setup & Risk Engine)</h3>
+        <button class="btn-close-modal" id="btnCloseResetModal">&times;</button>
+      </div>
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:16px;">
+        
+        <!-- Initial Balance -->
+        <div class="order-box">
+          <span class="order-label" style="font-weight:700;color:var(--text-main);">💰 Số vốn ban đầu (Initial Balance):</span>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+            <span style="font-size:14px;color:var(--color-bull);font-weight:700;">$</span>
+            <input type="number" class="input-num" id="inputResetBalance" value="10000" step="500" min="100" style="flex:1;font-size:14px;font-weight:700;">
+          </div>
+        </div>
+
+        <!-- Risk & Stop Loss Sizing Mode -->
+        <div class="order-box">
+          <span class="order-label" style="font-weight:700;color:var(--text-main);">🛡️ Phương Pháp Quản Lý Rủi Ro Stop Loss:</span>
+          
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <label class="btn-header" style="flex:1;justify-content:center;cursor:pointer;font-size:11px;" id="lblRiskPercent">
+              <input type="radio" name="radioRiskMode" value="PERCENT" checked style="margin-right:4px;">
+              <span>% Tài Khoản</span>
+            </label>
+            <label class="btn-header" style="flex:1;justify-content:center;cursor:pointer;font-size:11px;" id="lblRiskUSD">
+              <input type="radio" name="radioRiskMode" value="FIXED_USD" style="margin-right:4px;">
+              <span>Cố Định ($ USD)</span>
+            </label>
+            <label class="btn-header" style="flex:1;justify-content:center;cursor:pointer;font-size:11px;" id="lblRiskLot">
+              <input type="radio" name="radioRiskMode" value="FIXED_LOT" style="margin-right:4px;">
+              <span>Fixed Lots</span>
+            </label>
+          </div>
+
+          <!-- Dynamic Input Field based on selected Risk Mode -->
+          <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;background:var(--bg-secondary);padding:8px 12px;border-radius:var(--radius-md);border:1px solid var(--border-color);">
+            <span id="riskModeLabel" style="font-size:12px;font-weight:600;color:var(--text-muted);">Mức rủi ro (% Balance):</span>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <input type="number" class="input-num" id="inputRiskValue" value="1.0" step="0.1" min="0.01" style="width:100px;font-size:13px;font-weight:700;text-align:right;">
+              <span id="riskUnitLabel" style="font-size:12px;color:var(--color-accent);font-weight:700;">%</span>
+            </div>
+          </div>
+          <div id="riskDescText" style="font-size:11px;color:var(--text-dim);margin-top:6px;font-style:italic;">
+            Tự động tính Lot để khi dính SL chỉ mất đúng 1.0% tài khoản (~$100 cho tài khoản $10,000).
+          </div>
+        </div>
+
+        <!-- Position 2 Exit & ATR Trailing Engine -->
+        <div class="order-box">
+          <span class="order-label" style="font-weight:700;color:var(--text-main);">🌊 Chiến Thuật Chốt Lời Lệnh 2 (Position 2 Exit):</span>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
+              <input type="radio" name="radioPos2Mode" value="ATR_TRAILING" checked>
+              <span>🌊 <b>Thả TP & Trailing Stop theo ATR</b> (Ăn trọn con sóng lớn)</span>
+            </label>
+            <div id="boxAtrMultiplier" style="margin-left:24px;display:flex;align-items:center;gap:8px;background:var(--bg-secondary);padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border-color);width:fit-content;">
+              <span style="font-size:11px;color:var(--text-muted);">Khoảng cách Trailing:</span>
+              <input type="number" class="input-num" id="inputAtrMultiplier" value="3.0" step="0.5" min="1.0" max="10.0" style="width:65px;font-size:12px;font-weight:700;text-align:center;">
+              <span style="font-size:11px;color:var(--color-accent);font-weight:700;">x ATR(14)</span>
+            </div>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
+              <input type="radio" name="radioPos2Mode" value="FIXED_RR">
+              <span>🎯 <b>Chốt lời theo R:R cố định</b> (Take Profit tại RR 1:3)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Start Point Option -->
+        <div class="order-box">
+          <span class="order-label" style="font-weight:700;color:var(--text-main);">📅 Điểm Khởi Đầu Backtest:</span>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
+              <input type="radio" name="radioStartPoint" value="YEAR_2000" checked>
+              <span>📅 Bắt đầu từ khởi nguyên năm 2000 (03/01/2000)</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
+              <input type="radio" name="radioStartPoint" value="CURRENT">
+              <span>⏱️ Giữ nguyên vị trí cây nến hiện tại trên biểu đồ</span>
+            </label>
+          </div>
+        </div>
+
+
+      </div>
+      <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px;">
+        <button class="btn-modal-action" id="btnCancelReset">Hủy bỏ</button>
+        <button class="btn-modal-action primary" id="btnConfirmReset" style="background:linear-gradient(135deg, #ec4899, #8b5cf6);color:#fff;font-weight:700;">
+          🚀 Áp Dụng & Bắt Đầu Backtest Mới
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ================= EA CONFIG MODAL ================= -->
+  <div class="modal-overlay" id="eaConfigModal">
+    <div class="modal-container" style="width:560px;">
+      <div class="modal-header">
+        <h3>⚙️ Cấu Hình Simple DCA EA (v1.40 & v1.41)</h3>
+        <button class="btn-close-modal" id="btnCloseEAConfig">&times;</button>
+      </div>
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;max-height:75vh;overflow-y:auto;">
+        
+        <div class="order-box">
+          <span class="order-label" style="font-weight:700;color:var(--text-main);">🤖 Chọn Preset Nhanh:</span>
+          <select class="custom-select" id="eaModalPresetSelect" style="width:100%;margin-top:6px;">
+            <option value="v1.41_XAU_Linear_Max4Orders_Continuous">v1.41 XAU Linear Micro (Max 4 Orders, Continuous)</option>
+            <option value="v1.41_XAU_Flat002_Max4Orders_Continuous">v1.41 XAU Flat 0.02 Lot (Max 4 Orders, Continuous)</option>
+            <option value="v1.40_XAU_SlidingWindow_RSI_UltraFastScalp">v1.40 XAU Sliding Window RSI Ultra-Fast Scalp</option>
+            <option value="v1.40_XAU_SlidingWindow_UltraFastVolume">v1.40 XAU Sliding Window Ultra-Fast Volume (Flat Lot)</option>
+            <option value="v1.36_Scalper_1H_XAUUSD">v1.36 Scalper 1H XAUUSD</option>
+          </select>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="order-box">
+            <span class="order-label" style="font-weight:700;">Direction (Hướng giao dịch):</span>
+            <select class="custom-select" id="eaConfigDirection" style="width:100%;margin-top:6px;">
+              <option value="HEDGING_DUAL">Hedging Dual (Cả 2 Chiều)</option>
+              <option value="BUY_ONLY">Buy Only</option>
+              <option value="SELL_ONLY">Sell Only</option>
+            </select>
+          </div>
+          <div class="order-box">
+            <span class="order-label" style="font-weight:700;">First Trigger (Lệnh đầu):</span>
+            <select class="custom-select" id="eaConfigFirstTrigger" style="width:100%;margin-top:6px;">
+              <option value="IMMEDIATE">Immediate (Liên tục)</option>
+              <option value="RSI">RSI Quá Mua / Quá Bán</option>
+              <option value="BB">Bollinger Bands Chạm Dải</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="order-box">
+            <span class="order-label" style="font-weight:700;">Step Pips (Khoảng cách lưới):</span>
+            <input type="number" class="input-num" id="eaConfigStepPips" value="80" style="width:100%;margin-top:6px;" step="5">
+          </div>
+          <div class="order-box">
+            <span class="order-label" style="font-weight:700;">Max Active Orders (Số lệnh tối đa):</span>
+            <input type="number" class="input-num" id="eaConfigMaxActive" value="4" style="width:100%;margin-top:6px;" min="1" max="20">
+          </div>
+        </div>
+
+        <div class="order-box">
+          <span class="order-label" style="font-weight:700;">Lot Sequence (Dãy khối lượng vào lệnh):</span>
+          <input type="text" class="input-num" id="eaConfigLotSeq" value="0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08" style="width:100%;margin-top:6px;font-family:var(--font-mono);font-size:12px;">
+        </div>
+
+        <div class="order-box">
+          <span class="order-label" style="font-weight:700;">TP Sequence (Dãy TP tính từ giá BE - pips):</span>
+          <input type="text" class="input-num" id="eaConfigTpSeq" value="10,8,7,6,5,4,3,3,3,3,3,2,2,2,2,2" style="width:100%;margin-top:6px;font-family:var(--font-mono);font-size:12px;">
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px;background:var(--bg-secondary);padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border-color);">
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
+            <input type="checkbox" id="eaConfigEnableSW" checked>
+            <span>✂️ <b>Bật Sliding Window SL (FIFO Cut)</b>: Khi vượt quá Max Active Orders, tự động cắt lệnh xa nhất kéo BE về sát thị giá.</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
+            <input type="checkbox" id="eaConfigEnableBBFilter" checked>
+            <span>🛡️ <b>Bật Bollinger Bands DCA Filter</b>: Chặn nhồi lệnh khi giá bung ra ngoài dải băng BB (Anti-Runaway).</span>
+          </label>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px;">
+        <button class="btn-modal-action" id="btnCancelEAConfig">Hủy</button>
+        <button class="btn-modal-action primary" id="btnSaveEAConfig" style="background:#38bdf8;color:#0f172a;font-weight:700;">
+          Lưu & Áp Dụng Cấu Hình
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= FAST BACKTEST REPORT MODAL ================= -->
+  <div class="modal-overlay" id="fastBacktestModal">
+    <div class="modal-container" style="width:850px;max-width:92vw;">
+      <div class="modal-header">
+        <h3>🚀 Báo Cáo Kết Quả Fast Backtest Simple DCA EA</h3>
+        <button class="btn-close-modal" id="btnCloseFastBacktest">&times;</button>
+      </div>
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;max-height:80vh;overflow-y:auto;">
+        
+        <!-- Summary Cards Row -->
+        <div style="display:grid;grid-template-columns:repeat(5, 1fr);gap:10px;">
+          <div style="background:var(--bg-secondary);padding:10px;border-radius:8px;border:1px solid var(--border-color);text-align:center;">
+            <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Net Profit</div>
+            <div id="btNetProfit" style="font-size:16px;font-weight:700;color:var(--color-bull);margin-top:4px;">+$0.00</div>
+            <div id="btNetProfitPct" style="font-size:10px;color:var(--text-muted);">(0.00%)</div>
+          </div>
+          <div style="background:var(--bg-secondary);padding:10px;border-radius:8px;border:1px solid var(--border-color);text-align:center;">
+            <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Profit Factor</div>
+            <div id="btProfitFactor" style="font-size:16px;font-weight:700;color:#38bdf8;margin-top:4px;">0.00</div>
+          </div>
+          <div style="background:var(--bg-secondary);padding:10px;border-radius:8px;border:1px solid var(--border-color);text-align:center;">
+            <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Max Drawdown</div>
+            <div id="btMaxDrawdown" style="font-size:16px;font-weight:700;color:var(--color-bear);margin-top:4px;">0.00%</div>
+            <div id="btMaxDrawdownUsd" style="font-size:10px;color:var(--text-muted);">($0.00)</div>
+          </div>
+          <div style="background:var(--bg-secondary);padding:10px;border-radius:8px;border:1px solid var(--border-color);text-align:center;">
+            <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Completed Cycles</div>
+            <div id="btCycles" style="font-size:16px;font-weight:700;color:#a855f7;margin-top:4px;">0</div>
+          </div>
+          <div style="background:var(--bg-secondary);padding:10px;border-radius:8px;border:1px solid var(--border-color);text-align:center;">
+            <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Sliding Cuts</div>
+            <div id="btCuts" style="font-size:16px;font-weight:700;color:var(--color-warning);margin-top:4px;">0</div>
+            <div id="btCutLoss" style="font-size:10px;color:var(--text-muted);">-$0.00</div>
+          </div>
+        </div>
+
+        <!-- SVG Equity Curve Chart -->
+        <div style="background:var(--bg-secondary);padding:12px;border-radius:8px;border:1px solid var(--border-color);">
+          <div style="font-size:12px;font-weight:700;color:var(--text-main);margin-bottom:8px;display:flex;justify-content:space-between;">
+            <span>📈 Biểu Đồ Tăng Trưởng Tài Khoản (Equity Curve)</span>
+            <span id="btBarsTested" style="font-size:11px;color:var(--text-dim);font-weight:normal;">-- nến đã test</span>
+          </div>
+          <div id="btEquitySvgContainer" style="width:100%;height:180px;background:#0d1117;border-radius:6px;overflow:hidden;position:relative;">
+            <!-- SVG rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Recent Trade Cycles Table -->
+        <div style="background:var(--bg-secondary);padding:12px;border-radius:8px;border:1px solid var(--border-color);">
+          <div style="font-size:12px;font-weight:700;color:var(--text-main);margin-bottom:8px;">
+            📋 Nhật Ký 50 Chu Kỳ Gần Nhất
+          </div>
+          <div style="max-height:200px;overflow-y:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:11px;font-family:var(--font-mono);">
+              <thead>
+                <tr style="color:var(--text-dim);border-bottom:1px solid var(--border-color);text-align:left;">
+                  <th style="padding:4px 8px;">Thời gian (Server / VN)</th>
+                  <th style="padding:4px 8px;">Loại</th>
+                  <th style="padding:4px 8px;">Giá TP</th>
+                  <th style="padding:4px 8px;">Giá BE</th>
+                  <th style="padding:4px 8px;">Số Lệnh</th>
+                  <th style="padding:4px 8px;">Lợi Nhuận</th>
+                </tr>
+              </thead>
+              <tbody id="btTradesTableBody">
+                <!-- Rows injected dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="display:flex;justify-content:flex-end;">
+        <button class="btn-modal-action primary" id="btnOkFastBacktest" style="background:#10b981;color:#fff;font-weight:700;">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MULTI-PAIR LIVE REALTIME STRATEGIC RADAR MODAL ================= -->
+  <div class="modal-overlay" id="liveRadarModal">
+    <div class="modal-box" style="max-width:1120px;width:96%;">
+      <div class="modal-header">
+        <span class="modal-title">📡 BẢNG RADAR QUÂN SƯ ĐỊNH LƯỢNG REALTIME (COMBINE H4/H1 + M15/M5 & 3-IN-1 TRUST SCORECARD)</span>
+        <button class="modal-close" id="btnCloseLiveRadar">&times;</button>
+      </div>
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(15,23,42,0.85);padding:10px 14px;border-radius:8px;border:1px solid rgba(56,189,248,0.3);font-size:12px;flex-wrap:wrap;gap:8px;">
+          <div>
+            <span style="color:#94a3b8;">Thời gian quét (Server / VN):</span>
+            <b id="liveRadarScanTime" style="color:#38bdf8;font-family:var(--font-mono);margin-left:6px;">--:--:-- Server (VN: --:--:-- )</b>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <select id="liveRadarTfSelect" style="background:#1e293b;color:#38bdf8;border:1px solid #38bdf8;padding:4px 8px;border-radius:6px;font-weight:700;font-size:12px;">
+              <option value="H4_M15" selected>Khung Lớn H4 + Trigger M15 (Vàng / Crypto / Swing)</option>
+              <option value="H4_H1">Khung Lớn H4 + Trigger H1 (Chuẩn Forex Majors)</option>
+              <option value="H1_M5">Khung Lớn H1 + Trigger M5 (Intraday)</option>
+            </select>
+            <button class="btn-header" id="btnCalibrateAllRadar" style="background:#a855f7;color:#fff;border:none;padding:5px 12px;font-weight:700;" title="Chạy vòng lặp Tự học & Đấu loại Champion vs Challenger cho cả 7 cặp tiền">
+              🧠 Tự Học & Nâng Cấp 7 Cặp
+            </button>
+            <button class="btn-header" id="btnRefreshLiveRadar" style="background:#10b981;color:#fff;border:none;padding:5px 12px;font-weight:700;">
+              🔄 Quét Lại Ngay
+            </button>
+          </div>
+        </div>
+
+        <div style="overflow-x:auto;background:var(--bg-secondary);border-radius:8px;border:1px solid var(--border-color);">
+          <table style="width:100%;border-collapse:collapse;font-size:11.5px;font-family:var(--font-mono);">
+            <thead>
+              <tr style="background:rgba(30,41,59,0.9);color:#94a3b8;text-align:left;border-bottom:1px solid var(--border-color);">
+                <th style="padding:8px 10px;">Tài Sản / Nguồn</th>
+                <th style="padding:8px 10px;">Thời Gian (Server / VN)</th>
+                <th style="padding:8px 10px;">Tầng 1: Forecast H4/H1</th>
+                <th style="padding:8px 10px;">Combine (HTF + LTF)</th>
+                <th style="padding:8px 10px;">Độ Tin Cậy (Trust / WR)</th>
+                <th style="padding:8px 10px;">Tầng 2: Trạng Thái M15/M5</th>
+                <th style="padding:8px 10px;">Kế Hoạch Đề Xuất (Entry / SL / TP)</th>
+                <th style="padding:8px 10px;">Phiên DNA</th>
+                <th style="padding:8px 10px;">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody id="liveRadarTableBody">
+              <tr><td colspan="9" style="padding:18px;text-align:center;color:#94a3b8;">Đang tải dữ liệu Radar Realtime...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="font-size:11px;color:#94a3b8;line-height:1.5;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);padding:8px 12px;border-radius:6px;">
+          💡 <b>Nguyên tắc Combine 2 Tầng & Tự Học:</b> Mọi bản tin dự báo đều được lưu vào sổ cái SQLite (`forecast_ledger.db`) và tự động đối soát khi nến tương lai đóng cửa. Cột <b>Độ Tin Cậy (Trust / WR)</b> phản ánh chính xác tỷ lệ thắng thực chiến và điểm hiệu chuẩn Brier Score của từng cặp tiền.
+        </div>
+      </div>
+      <div class="modal-footer" style="display:flex;justify-content:flex-end;">
+        <button class="btn-modal-action primary" id="btnOkLiveRadar" style="background:#38bdf8;color:#0f172a;font-weight:700;">Đóng Bảng Radar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 3-IN-1 FORECAST ACCURACY & ADAPTIVE SELF-IMPROVEMENT MODAL ================= -->
+  <div class="modal-overlay" id="forecastAccuracyModal">
+    <div class="modal-box" style="max-width:1080px;width:96%;max-height:90vh;display:flex;flex-direction:column;">
+      <div class="modal-header">
+        <span class="modal-title" id="accModalTitle">🎯 BẢNG ĐIỂM ĐỘ CHÍNH XÁC 3-TRONG-1 & HỆ THỐNG TỰ HỌC (CHAMPION vs CHALLENGER)</span>
+        <button class="modal-close" id="btnCloseAccuracyModal">&times;</button>
+      </div>
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;overflow-y:auto;padding-right:4px;">
+        
+        <!-- Top Control & Model Status Bar -->
+        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(15,23,42,0.9);padding:10px 14px;border-radius:8px;border:1px solid rgba(16,185,129,0.35);flex-wrap:wrap;gap:10px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span style="font-size:13px;font-weight:700;color:#f8fafc;">Cặp Đang Kiểm Định: <b id="accSymbolLabel" style="color:#38bdf8;">XAUUSD (H4_M15)</b></span>
+            <span id="accModelVersionBadge" style="padding:3px 8px;border-radius:4px;background:rgba(168,85,247,0.22);color:#c084fc;font-family:var(--font-mono);font-size:11px;font-weight:700;">v3.0-Base</span>
+            <span id="accGuardrailBadge" style="padding:3px 8px;border-radius:4px;background:rgba(16,185,129,0.2);color:#34d399;font-size:11px;font-weight:700;">🟢 MÔ HÌNH ĐỒNG BỘ TỐT</span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="btn-header" id="btnRunSingleCalibration" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;padding:6px 14px;font-weight:700;">
+              🧠 Chạy Tự Học & Đấu Loại (Champion vs Challenger)
+            </button>
+            <button class="btn-header" id="btnRefreshAccuracy" style="background:#1e293b;color:#38bdf8;border:1px solid #38bdf8;padding:6px 12px;font-weight:700;">
+              🔄 Làm Mới Số Liệu
+            </button>
+          </div>
+        </div>
+
+        <!-- 3-in-1 Accuracy Scorecard Summary Grid -->
+        <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:10px;">
+          <div style="background:var(--bg-secondary);padding:12px;border-radius:8px;border:1px solid rgba(16,185,129,0.4);">
+            <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700;">🏆 Điểm Tin Cậy (Trust Score)</div>
+            <div id="accTrustScoreVal" style="font-size:22px;font-weight:800;color:#10b981;font-family:var(--font-mono);margin-top:4px;">-- / 100</div>
+            <div id="accVerifiedCountText" style="font-size:11px;color:#cbd5e1;margin-top:2px;">Đã đối soát: -- dự báo</div>
+          </div>
+
+          <div style="background:var(--bg-secondary);padding:12px;border-radius:8px;border:1px solid var(--border-color);">
+            <div style="font-size:10px;color:#38bdf8;text-transform:uppercase;font-weight:700;">📊 Tầng 1: Xác Suất & Brier</div>
+            <div id="accNonAdverseVal" style="font-size:18px;font-weight:800;color:#38bdf8;font-family:var(--font-mono);margin-top:4px;">--% Non-Adverse</div>
+            <div id="accBrierDirText" style="font-size:11px;color:#cbd5e1;margin-top:2px;">Đúng hướng: --% | Brier: --</div>
+          </div>
+
+          <div style="background:var(--bg-secondary);padding:12px;border-radius:8px;border:1px solid var(--border-color);">
+            <div style="font-size:10px;color:#fbbf24;text-transform:uppercase;font-weight:700;">⚡ Tầng 2: Kế Hoạch Entry/SL/TP</div>
+            <div id="accSetupWinrateVal" style="font-size:18px;font-weight:800;color:#fbbf24;font-family:var(--font-mono);margin-top:4px;">WR: --%</div>
+            <div id="accSetupExpRText" style="font-size:11px;color:#cbd5e1;margin-top:2px;">Kỳ vọng: -- R | TP1 Hit: --%</div>
+          </div>
+
+          <div style="background:var(--bg-secondary);padding:12px;border-radius:8px;border:1px solid var(--border-color);">
+            <div style="font-size:10px;color:#c084fc;text-transform:uppercase;font-weight:700;">🌊 Tầng 3: Độ Chuẩn Biên Độ Sóng</div>
+            <div id="accWaveCaptureVal" style="font-size:18px;font-weight:800;color:#c084fc;font-family:var(--font-mono);margin-top:4px;">Capture: --%</div>
+            <div id="accWaveMaeText" style="font-size:11px;color:#cbd5e1;margin-top:2px;">Sai số đường phóng chiếu: -- ATR</div>
+          </div>
+        </div>
+
+        <!-- Champion vs Challenger Evolution & Reliability Calibration Row -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          
+          <!-- Left: Reliability Calibration Buckets -->
+          <div style="background:var(--bg-secondary);padding:12px;border-radius:8px;border:1px solid var(--border-color);">
+            <div style="font-size:12px;font-weight:700;color:#f8fafc;margin-bottom:8px;">
+              📈 Bảng Hiệu Chuẩn Xác Suất Thực Tế (Reliability Calibration Buckets)
+            </div>
+            <table style="width:100%;border-collapse:collapse;font-size:11px;font-family:var(--font-mono);">
+              <thead>
+                <tr style="color:#94a3b8;border-bottom:1px solid var(--border-color);text-align:left;">
+                  <th style="padding:5px 6px;">Nhóm Xác Suất</th>
+                  <th style="padding:5px 6px;">Số Mẫu</th>
+                  <th style="padding:5px 6px;">Dự Báo TB</th>
+                  <th style="padding:5px 6px;">Đúng Hướng</th>
+                  <th style="padding:5px 6px;">Không Ngược Sóng</th>
+                </tr>
+              </thead>
+              <tbody id="accReliabilityTableBody">
+                <tr><td colspan="5" style="padding:10px;text-align:center;color:#94a3b8;">Đang tải...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Right: Active Champion Parameters & Upgrade History -->
+          <div style="background:var(--bg-secondary);padding:12px;border-radius:8px;border:1px solid var(--border-color);display:flex;flex-direction:column;gap:6px;">
+            <div style="font-size:12px;font-weight:700;color:#f8fafc;">
+              🧬 Bộ Trọng Số Champion Đang Chạy & Lịch Sử Tự Nâng Cấp
+            </div>
+            <div id="accActiveProfileBox" style="font-size:11px;font-family:var(--font-mono);color:#cbd5e1;line-height:1.55;background:rgba(15,23,42,0.7);padding:8px 10px;border-radius:6px;border:1px solid rgba(168,85,247,0.3);">
+              Đang tải cấu hình Champion...
+            </div>
+            <div id="accCalibrationResultBanner" style="display:none;font-size:11px;font-family:var(--font-mono);padding:8px 10px;border-radius:6px;background:rgba(16,185,129,0.15);border:1px solid #10b981;color:#d1fae5;">
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Bottom: Recent 25 Verified Forecasts Audit Table (Server Time & VN Time) -->
+        <div style="background:var(--bg-secondary);padding:12px;border-radius:8px;border:1px solid var(--border-color);">
+          <div style="font-size:12px;font-weight:700;color:#f8fafc;margin-bottom:8px;">
+            📋 Nhật Ký Đối Soát 25 Dự Báo Đã Đóng Nến Gần Nhất (Giờ Server & Giờ Việt Nam UTC+7)
+          </div>
+          <div style="max-height:210px;overflow-y:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:11px;font-family:var(--font-mono);">
+              <thead>
+                <tr style="color:#94a3b8;border-bottom:1px solid var(--border-color);text-align:left;">
+                  <th style="padding:5px 8px;">Thời Gian (Server / VN)</th>
+                  <th style="padding:5px 8px;">Dự Báo (UP / DN / SW)</th>
+                  <th style="padding:5px 8px;">Trạng Thái & Plan</th>
+                  <th style="padding:5px 8px;">Thực Tế H-Nến</th>
+                  <th style="padding:5px 8px;">Kết Quả Setup</th>
+                  <th style="padding:5px 8px;">Realized R</th>
+                  <th style="padding:5px 8px;">Sai Số Sóng</th>
+                </tr>
+              </thead>
+              <tbody id="accRecentVerifiedBody">
+                <tr><td colspan="7" style="padding:12px;text-align:center;color:#94a3b8;">Đang tải lịch sử đối soát...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="display:flex;justify-content:flex-end;">
+        <button class="btn-modal-action primary" id="btnOkAccuracyModal" style="background:#10b981;color:#fff;font-weight:700;">Đóng Bảng Kiểm Định</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ================= RIGHT CLICK CONTEXT MENU ================= -->
+  <div id="chartContextMenu" class="context-menu" style="display:none;">
+    <div class="context-menu-item" id="ctxCopyCursorPrice">
+      <span class="ctx-icon">🎯</span>
+      <span class="ctx-text">Sao chép giá chuột: <b id="ctxValCursor">--</b></span>
+    </div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" id="ctxSetEntry">
+      <span class="ctx-icon">⚡</span>
+      <span class="ctx-text">Đặt làm Entry: <b id="ctxSetEntryVal">--</b></span>
+    </div>
+    <div class="context-menu-item" id="ctxSetSL">
+      <span class="ctx-icon">🛑</span>
+      <span class="ctx-text">Đặt làm Stop Loss (SL): <b id="ctxSetSLVal">--</b></span>
+    </div>
+    <div class="context-menu-item" id="ctxSetTP">
+      <span class="ctx-icon">🎯</span>
+      <span class="ctx-text">Đặt làm Take Profit (TP): <b id="ctxSetTPVal">--</b></span>
+    </div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" id="ctxCopyCurrentPrice">
+      <span class="ctx-icon">📋</span>
+      <span class="ctx-text">Sao chép giá hiện tại: <b id="ctxValCurrent">--</b></span>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="appToast" class="toast-notification"></div>
+
+  <!-- ================= JAVASCRIPT LIBS & APP CODE ================= -->
+  <script src="/static/js/lightweight-charts.standalone.production.js?v=4.0"></script>
+  <script src="/static/js/chart_manager.js?v=4.2"></script>
+  <script src="/static/js/drawing_tools.js?v=4.2"></script>
+  <script src="/static/js/script_editor.js?v=4.2"></script>
+  <script src="/static/js/replay_controller.js?v=4.2"></script>
+  <script src="/static/js/indicators.js?v=4.2"></script>
+  <script src="/static/js/trade_panel.js?v=4.2"></script>
+  <script src="/static/js/app.js?v=4.2"></script>
+</body>
+</html>

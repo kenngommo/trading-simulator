@@ -1,0 +1,30 @@
+# Python virtual environments & cache
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Environment & secrets
+.env
+*.env
+
+# SQLite temporary journals
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Logs & OS / IDE files
+*.log
+*.tmp
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+
+# Local one-off scratch scripts
+extract_pine.py
+save_pine.py
+verify_khuong_tf1_template.py

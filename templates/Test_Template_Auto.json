@@ -1,0 +1,9 @@
+{
+  "ema_fast": {
+    "enabled": true,
+    "type": "EMA",
+    "period": 25,
+    "color": "#00ff00",
+    "timeframe": "M15"
+  }
+}

@@ -1,0 +1,466 @@
+//@version=6
+indicator(title="TV 9EMA Ribbon + 4-Pillar MTF Master Dashboard [All-in-One]", shorttitle="9EMA_MTF", overlay=true)
+
+// ============================================================================
+// 1. MASTER DASHBOARD SETTINGS (M5 | M15 | H1 | H4 | D1)
+// ============================================================================
+grpDash        = "=== 4-Pillar MTF Master Dashboard (M5 | M15 | H1 | H4 | D1) ==="
+showDash       = input.bool(true,  "Show 4-Pillar MTF Master Dashboard", group=grpDash)
+onlyOnM15      = input.bool(false, "Show Dashboard ONLY on M5 / M15 Chart", group=grpDash, tooltip="Bật nếu bạn mở nhiều biểu đồ cạnh nhau và chỉ muốn hiện bảng trên khung M5 hoặc M15.")
+showTfM5       = input.bool(true,  "Show M5 Timeframe Row",  group=grpDash)
+showTfM15      = input.bool(true,  "Show M15 Timeframe Row", group=grpDash)
+showTfH1       = input.bool(true,  "Show H1 Timeframe Row",  group=grpDash)
+showTfH4       = input.bool(true,  "Show H4 Timeframe Row",  group=grpDash)
+showTfD1       = input.bool(true,  "Show D1 Timeframe Row",  group=grpDash)
+useM5InVerdict = input.bool(false, "Require M5 Confluence in Master Verdict", group=grpDash, tooltip="Nếu bật: tín hiệu BUY/SELL tổng đòi hỏi khung M5 cũng phải đạt chuẩn hợp lưu (cùng chiều M15 + H1).")
+dashBarMode    = input.string("Live Bar (Real-time)", "Dashboard Evaluation Mode", options=["Live Bar (Real-time)", "Closed Bar Only (Confirmed)"], group=grpDash)
+dashPosInput   = input.string("Top-Left", "Dashboard Position", options=["Top-Left", "Top-Right", "Bottom-Left", "Bottom-Right", "Top-Center", "Bottom-Center"], group=grpDash)
+dashSizeInput  = input.string("Small", "Dashboard Font Size", options=["Tiny", "Small", "Normal"], group=grpDash)
+minM15Pillars  = input.int(3, "Min M5/M15 Pillars Required (3/4 + Stoch)", minval=1, maxval=4, group=grpDash)
+minH1Pillars   = input.int(3, "Min H1/H4/D1 Pillars Required (3/4 + Stoch)", minval=1, maxval=4, group=grpDash)
+showArrows     = input.bool(true, "Show Confirmed Buy/Sell Arrows on Chart", group=grpDash)
+showCountdown  = input.bool(true, "Show Current Timeframe Candle Countdown Timer", group=grpDash)
+showPriceTimer = input.bool(true, "Show Floating Countdown Next to Current Bar", group=grpDash)
+
+grpScan        = "=== Alert & Multi-Pair 15M Scanner ==="
+enableAlerts   = input.bool(true,  "Enable Dynamic Alert Notifications (Bar Close)", group=grpScan)
+enableEarlyAlt = input.bool(false, "Enable Early Warning Alert (Live Intra-Bar)", group=grpScan)
+minAlertTier   = input.int(1, "Min Alert Tier (1=Confirmed, 2=*Strong, 3=**Super)", minval=1, maxval=3, group=grpScan)
+enableScanner  = input.bool(true,  "Enable Multi-Pair 15M Scanner & Radar Row", group=grpScan)
+scanSym1       = input.symbol("OANDA:XAUUSD",    "Scanner Symbol 1", group=grpScan)
+scanSym2       = input.symbol("FOREXCOM:US30",   "Scanner Symbol 2", group=grpScan)
+scanSym3       = input.symbol("FOREXCOM:SPX500", "Scanner Symbol 3", group=grpScan)
+scanSym4       = input.symbol("FOREXCOM:NAS100", "Scanner Symbol 4", group=grpScan)
+scanSym5       = input.symbol("FX:EURUSD",       "Scanner Symbol 5", group=grpScan)
+
+// ============================================================================
+// 2. 9EMA RIBBON SETTINGS (5, 12, 21, 50, 100, 200 + 35, 75, 150)
+// ============================================================================
+grpEma  = "=== 9EMA Ribbon Periods & Visibility (TradingView Preset) ==="
+showMa1 = input.bool(true,  "MA1 (EMA 5 - Yellow)",   inline="ma1", group=grpEma)
+len1    = input.int(5,      "", minval=1,             inline="ma1", group=grpEma)
+showMa2 = input.bool(true,  "MA2 (EMA 12 - Orange)",  inline="ma2", group=grpEma)
+len2    = input.int(12,     "", minval=1,             inline="ma2", group=grpEma)
+showMa3 = input.bool(true,  "MA3 (EMA 21 - Green)",   inline="ma3", group=grpEma)
+len3    = input.int(21,     "", minval=1,             inline="ma3", group=grpEma)
+showMa4 = input.bool(true,  "MA4 (EMA 50 - Blue)",    inline="ma4", group=grpEma)
+len4    = input.int(50,     "", minval=1,             inline="ma4", group=grpEma)
+showMa5 = input.bool(true,  "MA5 (EMA 100 - Red)",    inline="ma5", group=grpEma)
+len5    = input.int(100,    "", minval=1,             inline="ma5", group=grpEma)
+showMa6 = input.bool(true,  "MA6 (EMA 200 - White)",  inline="ma6", group=grpEma)
+len6    = input.int(200,    "", minval=1,             inline="ma6", group=grpEma)
+showMa7 = input.bool(false, "MA7 (EMA 35 - Hidden)",  inline="ma7", group=grpEma)
+len7    = input.int(35,     "", minval=1,             inline="ma7", group=grpEma)
+showMa8 = input.bool(false, "MA8 (EMA 75 - Hidden)",  inline="ma8", group=grpEma)
+len8    = input.int(75,     "", minval=1,             inline="ma8", group=grpEma)
+showMa9 = input.bool(false, "MA9 (EMA 150 - Hidden)", inline="ma9", group=grpEma)
+len9    = input.int(150,    "", minval=1,             inline="ma9", group=grpEma)
+srcEma  = input.source(close, "Source Price (All 9 EMAs)", group=grpEma)
+
+// ============================================================================
+// 3. 9EMA RIBBON CALCULATIONS & PLOTS
+// ============================================================================
+ma1 = ta.ema(srcEma, len1)
+ma2 = ta.ema(srcEma, len2)
+ma3 = ta.ema(srcEma, len3)
+ma4 = ta.ema(srcEma, len4)
+ma5 = ta.ema(srcEma, len5)
+ma6 = ta.ema(srcEma, len6)
+ma7 = ta.ema(srcEma, len7)
+ma8 = ta.ema(srcEma, len8)
+ma9 = ta.ema(srcEma, len9)
+
+plot(showMa1 ? ma1 : na, "MA1 (EMA 5)",   color=color.rgb(255, 235, 59),  linewidth=1)
+plot(showMa2 ? ma2 : na, "MA2 (EMA 12)",  color=color.rgb(255, 152, 0),   linewidth=2)
+plot(showMa3 ? ma3 : na, "MA3 (EMA 21)",  color=color.rgb(76, 175, 80),   linewidth=2)
+plot(showMa4 ? ma4 : na, "MA4 (EMA 50)",  color=color.rgb(41, 98, 255),   linewidth=2)
+plot(showMa5 ? ma5 : na, "MA5 (EMA 100)", color=color.rgb(242, 54, 69),   linewidth=2)
+plot(showMa6 ? ma6 : na, "MA6 (EMA 200)", color=color.rgb(219, 219, 219), linewidth=2)
+plot(showMa7 ? ma7 : na, "MA7 (EMA 35)",  color=color.rgb(12, 50, 153),   linewidth=2)
+plot(showMa8 ? ma8 : na, "MA8 (EMA 75)",  color=color.rgb(12, 50, 153),   linewidth=2)
+plot(showMa9 ? ma9 : na, "MA9 (EMA 150)", color=color.rgb(12, 50, 153),   linewidth=2)
+
+// ============================================================================
+// 4. 4-PILLAR MULTI-TIMEFRAME CONFLUENCE ENGINE (M5 | M15 | H1 | H4 | D1)
+//    100% Mathematical & Logical Parity with TV_MTF_Confluence_Core.mqh
+// ============================================================================
+f_eval_pillars() =>
+    // --- Pillar 1: EMA 5 (Yellow) & EMA 12 (Orange) Cross / Pullback Hook ---
+    e5      = ta.ema(close, 5)
+    e12     = ta.ema(close, 12)
+    minEma0 = math.min(e5, e12)
+    maxEma0 = math.max(e5, e12)
+    minEma1 = math.min(e5[1], e12[1])
+    maxEma1 = math.max(e5[1], e12[1])
+    minEma2 = math.min(e5[2], e12[2])
+    maxEma2 = math.max(e5[2], e12[2])
+
+    rawCrossUp   = ta.crossover(e5, e12)
+    rawCrossDown = ta.crossunder(e5, e12)
+    crossUp      = rawCrossUp   and close >= minEma0
+    crossDown    = rawCrossDown and close <= maxEma0
+
+    // Pullback Hook Down: Price rallied into/above both EMA 5 & 12 (within last 1-3 bars) and hooked down closing below BOTH
+    ralliedIntoBoth = high >= maxEma0 or high[1] >= maxEma1 or high[2] >= maxEma2
+    wasAboveMinEma  = close[1] >= minEma1 or open >= minEma0
+    closedBelowBoth = close < minEma0 and close < open
+    pullbkDn        = ralliedIntoBoth and wasAboveMinEma and closedBelowBoth
+
+    // Pullback Hook Up: Price dipped into/below both EMA 5 & 12 (within last 1-3 bars) and hooked up closing above BOTH
+    dippedIntoBoth  = low <= minEma0 or low[1] <= minEma1 or low[2] <= minEma2
+    wasBelowMaxEma  = close[1] <= maxEma1 or open <= maxEma0
+    closedAboveBoth = close > maxEma0 and close > open
+    pullbkUp        = dippedIntoBoth and wasBelowMaxEma and closedAboveBoth
+
+    // emaState: -3=CrossDn, -2=PullbkDn, -1=EMA5<12, +1=EMA5>12, +2=PullbkUp, +3=CrossUp, 0=Pullbk/Wait
+    emaState = crossDown ? -3 : (pullbkDn ? -2 : ((e5 < e12 and close <= maxEma0) ? -1 : (crossUp ? 3 : (pullbkUp ? 2 : ((e5 > e12 and close >= minEma0) ? 1 : 0)))))
+    emaDir   = emaState < 0 ? -1 : (emaState > 0 ? 1 : 0)
+
+    // --- Pillar 2: Stochastic (14, 3, 3) - Highest Priority * ---
+    rawK     = ta.stoch(close, high, low, 14)
+    kVal     = ta.sma(rawK, 3)
+    dVal     = ta.sma(kVal, 3)
+    stochDir = kVal < dVal ? -1 : (kVal > dVal ? 1 : (kVal > kVal[1] ? 1 : (kVal < kVal[1] ? -1 : 0)))
+    isOB     = kVal >= 80.0 or dVal >= 80.0
+    isOS     = kVal <= 20.0 or dVal <= 20.0
+
+    // --- Pillar 3: RSI (14) + SMA (9) + WMA (45) ---
+    rsi14    = ta.rsi(close, 14)
+    rsiMa9   = ta.sma(rsi14, 9)
+    wma45    = ta.wma(rsi14, 45)
+    w45Above = wma45 > rsi14 and wma45 > rsiMa9
+    w45Below = wma45 < rsi14 and wma45 < rsiMa9
+    // rsiDir: -2=Strong Sell (*<WMA45), -1=Sell (<MA9), +2=Strong Buy (*>WMA45), +1=Buy (>MA9), 0=Flat
+    rsiDir   = rsi14 < rsiMa9 ? (w45Above ? -2 : -1) : (rsi14 > rsiMa9 ? (w45Below ? 2 : 1) : 0)
+
+    // --- Pillar 4: MACD (12, 26, 9) ---
+    [macdLine, sigLine, hist] = ta.macd(close, 12, 26, 9)
+    histFalling = hist < hist[1]
+    histRising  = hist > hist[1]
+    // macdState: -2=MACD Down (<0), -1=Buy Weak (>=0 & falling), +2=MACD Up (>0), +1=Sell Weak (<=0 & rising), 0=Flat
+    macdState = histFalling ? (hist >= 0 ? -1 : -2) : (histRising ? (hist <= 0 ? 1 : 2) : (macdLine >= sigLine ? 1 : -1))
+    macdDir   = macdState < 0 ? -1 : (macdState > 0 ? 1 : 0)
+
+    bulls = (emaDir > 0 ? 1 : 0) + (stochDir > 0 ? 1 : 0) + (rsiDir > 0 ? 1 : 0) + (macdDir > 0 ? 1 : 0)
+    bears = (emaDir < 0 ? 1 : 0) + (stochDir < 0 ? 1 : 0) + (rsiDir < 0 ? 1 : 0) + (macdDir < 0 ? 1 : 0)
+    [emaState, stochDir, kVal, dVal, rsiDir, macdState, bulls, bears, isOB, isOS]
+
+// 1. Non-repainting confirmed evaluation (for historical signal arrows)
+[cM5Ema,  cM5Stoch,  cM5K,  cM5D,  cM5Rsi,  cM5Macd,  cM5Bull,  cM5Bear,  cM5OB,  cM5OS]  = request.security(syminfo.tickerid, "5",   f_eval_pillars(), lookahead=barmerge.lookahead_off)
+[cM15Ema, cM15Stoch, cM15K, cM15D, cM15Rsi, cM15Macd, cM15Bull, cM15Bear, cM15OB, cM15OS] = request.security(syminfo.tickerid, "15",  f_eval_pillars(), lookahead=barmerge.lookahead_off)
+[cH1Ema,  cH1Stoch,  cH1K,  cH1D,  cH1Rsi,  cH1Macd,  cH1Bull,  cH1Bear,  cH1OB,  cH1OS]  = request.security(syminfo.tickerid, "60",  f_eval_pillars(), lookahead=barmerge.lookahead_off)
+[cH4Ema,  cH4Stoch,  cH4K,  cH4D,  cH4Rsi,  cH4Macd,  cH4Bull,  cH4Bear,  cH4OB,  cH4OS]  = request.security(syminfo.tickerid, "240", f_eval_pillars(), lookahead=barmerge.lookahead_off)
+[cD1Ema,  cD1Stoch,  cD1K,  cD1D,  cD1Rsi,  cD1Macd,  cD1Bull,  cD1Bear,  cD1OB,  cD1OS]  = request.security(syminfo.tickerid, "D",   f_eval_pillars(), lookahead=barmerge.lookahead_off)
+
+// 2. Live real-time evaluation for the Dashboard on barstate.islast (matches MT5 Live Bar 0 across M5/M15/H1/H4/D1)
+[lM5Ema,  lM5Stoch,  lM5K,  lM5D,  lM5Rsi,  lM5Macd,  lM5Bull,  lM5Bear,  lM5OB,  lM5OS]  = request.security(syminfo.tickerid, "5",   f_eval_pillars(), lookahead=barmerge.lookahead_on)
+[lM15Ema, lM15Stoch, lM15K, lM15D, lM15Rsi, lM15Macd, lM15Bull, lM15Bear, lM15OB, lM15OS] = request.security(syminfo.tickerid, "15",  f_eval_pillars(), lookahead=barmerge.lookahead_on)
+[lH1Ema,  lH1Stoch,  lH1K,  lH1D,  lH1Rsi,  lH1Macd,  lH1Bull,  lH1Bear,  lH1OB,  lH1OS]  = request.security(syminfo.tickerid, "60",  f_eval_pillars(), lookahead=barmerge.lookahead_on)
+[lH4Ema,  lH4Stoch,  lH4K,  lH4D,  lH4Rsi,  lH4Macd,  lH4Bull,  lH4Bear,  lH4OB,  lH4OS]  = request.security(syminfo.tickerid, "240", f_eval_pillars(), lookahead=barmerge.lookahead_on)
+[lD1Ema,  lD1Stoch,  lD1K,  lD1D,  lD1Rsi,  lD1Macd,  lD1Bull,  lD1Bear,  lD1OB,  lD1OS]  = request.security(syminfo.tickerid, "D",   f_eval_pillars(), lookahead=barmerge.lookahead_on)
+
+useLive = dashBarMode == "Live Bar (Real-time)"
+
+m5Ema    = useLive ? lM5Ema    : cM5Ema
+m5Stoch  = useLive ? lM5Stoch  : cM5Stoch
+m5K      = useLive ? lM5K      : cM5K
+m5D      = useLive ? lM5D      : cM5D
+m5Rsi    = useLive ? lM5Rsi    : cM5Rsi
+m5Macd   = useLive ? lM5Macd   : cM5Macd
+m5Bull   = useLive ? lM5Bull   : cM5Bull
+m5Bear   = useLive ? lM5Bear   : cM5Bear
+m5OB     = useLive ? lM5OB     : cM5OB
+m5OS     = useLive ? lM5OS     : cM5OS
+
+m15Ema   = useLive ? lM15Ema   : cM15Ema
+m15Stoch = useLive ? lM15Stoch : cM15Stoch
+m15K     = useLive ? lM15K     : cM15K
+m15D     = useLive ? lM15D     : cM15D
+m15Rsi   = useLive ? lM15Rsi   : cM15Rsi
+m15Macd  = useLive ? lM15Macd  : cM15Macd
+m15Bull  = useLive ? lM15Bull  : cM15Bull
+m15Bear  = useLive ? lM15Bear  : cM15Bear
+m15OB    = useLive ? lM15OB    : cM15OB
+m15OS    = useLive ? lM15OS    : cM15OS
+
+h1Ema    = useLive ? lH1Ema    : cH1Ema
+h1Stoch  = useLive ? lH1Stoch  : cH1Stoch
+h1K      = useLive ? lH1K      : cH1K
+h1D      = useLive ? lH1D      : cH1D
+h1Rsi    = useLive ? lH1Rsi    : cH1Rsi
+h1Macd   = useLive ? lH1Macd   : cH1Macd
+h1Bull   = useLive ? lH1Bull   : cH1Bull
+h1Bear   = useLive ? lH1Bear   : cH1Bear
+h1OB     = useLive ? lH1OB     : cH1OB
+h1OS     = useLive ? lH1OS     : cH1OS
+
+h4Ema    = useLive ? lH4Ema    : cH4Ema
+h4Stoch  = useLive ? lH4Stoch  : cH4Stoch
+h4K      = useLive ? lH4K      : cH4K
+h4D      = useLive ? lH4D      : cH4D
+h4Rsi    = useLive ? lH4Rsi    : cH4Rsi
+h4Macd   = useLive ? lH4Macd   : cH4Macd
+h4Bull   = useLive ? lH4Bull   : cH4Bull
+h4Bear   = useLive ? lH4Bear   : cH4Bear
+h4OB     = useLive ? lH4OB     : cH4OB
+h4OS     = useLive ? lH4OS     : cH4OS
+
+d1Ema    = useLive ? lD1Ema    : cD1Ema
+d1Stoch  = useLive ? lD1Stoch  : cD1Stoch
+d1K      = useLive ? lD1K      : cD1K
+d1D      = useLive ? lD1D      : cD1D
+d1Rsi    = useLive ? lD1Rsi    : cD1Rsi
+d1Macd   = useLive ? lD1Macd   : cD1Macd
+d1Bull   = useLive ? lD1Bull   : cD1Bull
+d1Bear   = useLive ? lD1Bear   : cD1Bear
+d1OB     = useLive ? lD1OB     : cD1OB
+d1OS     = useLive ? lD1OS     : cD1OS
+
+// --- Helper for Master Verdict (M5 optional/fallback LTF, H4 & D1 share identical criteria) ---
+f_verdict(int m5Bear_, int m5Bull_, int m5Stoch_, int m5Ema_, int mBear, int mBull, int mStoch, int mEma, int h1Bear_, int h1Bull_, int h1Stoch_, int h4Bear_, int h4Bull_, int h4Stoch_, bool h4OB_, bool h4OS_, int h4Macd_, int d1Bear_, int d1Bull_, int d1Stoch_, bool d1OB_, bool d1OS_, int d1Macd_) =>
+    m5Sell  = m5Bear_ >= minM15Pillars and m5Stoch_ < 0 and m5Ema_ <= 0
+    m15Sell = mBear   >= minM15Pillars and mStoch   < 0 and mEma   <= 0
+    ltfSell = (not showTfM15 and showTfM5) ? m5Sell : (useM5InVerdict and showTfM5) ? (m5Sell and m15Sell) : m15Sell
+
+    h1Sell  = not showTfH1 or (h1Stoch_ < 0 and h1Bear_ >= minH1Pillars)
+    h4SExh  = h4OB_ and h4Macd_ < 0
+    h4Sell  = showTfH4 and ((h4Stoch_ < 0 and h4Bear_ >= minH1Pillars) or h4SExh)
+    d1SExh  = d1OB_ and d1Macd_ < 0
+    d1Sell  = showTfD1 and ((d1Stoch_ < 0 and d1Bear_ >= minH1Pillars) or d1SExh)
+
+    m5Buy   = m5Bull_ >= minM15Pillars and m5Stoch_ > 0 and m5Ema_ >= 0
+    m15Buy  = mBull   >= minM15Pillars and mStoch   > 0 and mEma   >= 0
+    ltfBuy  = (not showTfM15 and showTfM5) ? m5Buy : (useM5InVerdict and showTfM5) ? (m5Buy and m15Buy) : m15Buy
+
+    h1Buy   = not showTfH1 or (h1Stoch_ > 0 and h1Bull_ >= minH1Pillars)
+    h4BExh  = h4OS_ and h4Macd_ > 0
+    h4Buy   = showTfH4 and ((h4Stoch_ > 0 and h4Bull_ >= minH1Pillars) or h4BExh)
+    d1BExh  = d1OS_ and d1Macd_ > 0
+    d1Buy   = showTfD1 and ((d1Stoch_ > 0 and d1Bull_ >= minH1Pillars) or d1BExh)
+
+    sig = (ltfSell and h1Sell and h4Sell and d1Sell) ? -3 : (ltfSell and h1Sell and (h4Sell or d1Sell)) ? -2 : (ltfSell and h1Sell) ? -1 : (ltfBuy and h1Buy and h4Buy and d1Buy) ? 3 : (ltfBuy and h1Buy and (h4Buy or d1Buy)) ? 2 : (ltfBuy and h1Buy) ? 1 : 0
+    [sig, m5Sell, m5Buy, h4Sell, d1Sell, h4SExh, d1SExh, h4Buy, d1Buy, h4BExh, d1BExh]
+
+[confSig, confM5Sell, confM5Buy, confH4Sell, confD1Sell, confH4SExh, confD1SExh, confH4Buy, confD1Buy, confH4BExh, confD1BExh] = f_verdict(cM5Bear, cM5Bull, cM5Stoch, cM5Ema, cM15Bear, cM15Bull, cM15Stoch, cM15Ema, cH1Bear, cH1Bull, cH1Stoch, cH4Bear, cH4Bull, cH4Stoch, cH4OB, cH4OS, cH4Macd, cD1Bear, cD1Bull, cD1Stoch, cD1OB, cD1OS, cD1Macd)
+[finalSig, m5SellConf, m5BuyConf, h4SellConf, d1SellConf, h4SellExh, d1SellExh, h4BuyConf, d1BuyConf, h4BuyExh, d1BuyExh]       = f_verdict(m5Bear,  m5Bull,  m5Stoch,  m5Ema,  m15Bear,  m15Bull,  m15Stoch,  m15Ema,  h1Bear,  h1Bull,  h1Stoch,  h4Bear,  h4Bull,  h4Stoch,  h4OB,  h4OS,  h4Macd,  d1Bear,  d1Bull,  d1Stoch,  d1OB,  d1OS,  d1Macd)
+
+// --- Multi-Symbol 15-Minute Scanner Helper ---
+f_scan_pair(string sym) =>
+    [sM15Ema, sM15Stoch, _, _, _, _, sM15Bull, sM15Bear, _, _]             = request.security(sym, "15",  f_eval_pillars(), lookahead=barmerge.lookahead_off, ignore_invalid_symbol=true)
+    [_,       sH1Stoch,  _, _, _, _, sH1Bull,  sH1Bear,  _, _]             = request.security(sym, "60",  f_eval_pillars(), lookahead=barmerge.lookahead_off, ignore_invalid_symbol=true)
+    [_,       sH4Stoch,  _, _, _, sH4Macd, sH4Bull, sH4Bear, sH4OB, sH4OS] = request.security(sym, "240", f_eval_pillars(), lookahead=barmerge.lookahead_off, ignore_invalid_symbol=true)
+    [_,       sD1Stoch,  _, _, _, sD1Macd, sD1Bull, sD1Bear, sD1OB, sD1OS] = request.security(sym, "D",   f_eval_pillars(), lookahead=barmerge.lookahead_off, ignore_invalid_symbol=true)
+    [sSig, _, _, _, _, _, _, _, _, _, _] = f_verdict(sM15Bear, sM15Bull, sM15Stoch, sM15Ema, sM15Bear, sM15Bull, sM15Stoch, sM15Ema, sH1Bear, sH1Bull, sH1Stoch, sH4Bear, sH4Bull, sH4Stoch, sH4OB, sH4OS, sH4Macd, sD1Bear, sD1Bull, sD1Stoch, sD1OB, sD1OS, sD1Macd)
+    sSig
+
+f_short_sym(string s) =>
+    pos = str.pos(s, ":")
+    na(pos) ? s : str.substring(s, pos + 1)
+
+f_sig_badge(int sig) =>
+    sig == -3 ? "**SELL" : sig == -2 ? "*SELL" : sig == -1 ? "vSELL" : sig == 3 ? "**BUY" : sig == 2 ? "*BUY" : sig == 1 ? "^BUY" : ""
+
+sigSym1 = enableScanner ? f_scan_pair(scanSym1) : 0
+sigSym2 = enableScanner ? f_scan_pair(scanSym2) : 0
+sigSym3 = enableScanner ? f_scan_pair(scanSym3) : 0
+sigSym4 = enableScanner ? f_scan_pair(scanSym4) : 0
+sigSym5 = enableScanner ? f_scan_pair(scanSym5) : 0
+
+// --- Non-Repainting Signal Arrows on Chart ---
+plotshape(showArrows and confSig > 0 and confSig[1] <= 0, title="Confirmed MTF BUY",  style=shape.triangleup,   location=location.belowbar, color=color.rgb(0, 230, 180), size=size.small, text="MTF BUY",  textcolor=color.rgb(0, 230, 180))
+plotshape(showArrows and confSig < 0 and confSig[1] >= 0, title="Confirmed MTF SELL", style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 92, 92), size=size.small, text="MTF SELL", textcolor=color.rgb(255, 92, 92))
+
+// ============================================================================
+// 5. RENDER MT5-PARITY MASTER DASHBOARD TABLE (M5 | M15 | H1 | H4 | D1)
+// ============================================================================
+f_ema_str(int st) =>
+    st == -3 ? "vCROSS DN" : st == -2 ? "vPULLBK*" : st == -1 ? "vEMA 5<12" : st == 3 ? "^CROSS UP" : st == 2 ? "^PULLBK*" : st == 1 ? "^EMA 5>12" : "-PULLBK.."
+
+f_stoch_str(int dir, float k, float d, bool ob, bool os) =>
+    kStr = str.tostring(math.round(k), "00")
+    dStr = str.tostring(math.round(d), "00")
+    dir < 0 ? (os ? "vOS " + kStr + "<" + dStr : ob ? "vOB " + kStr + "<" + dStr : "vDN " + kStr + "<" + dStr) : dir > 0 ? (ob ? "^OB " + kStr + ">" + dStr : os ? "^OS " + kStr + ">" + dStr : "^UP " + kStr + ">" + dStr) : "-EQ " + kStr + "=" + dStr
+
+f_rsi_str(int st) =>
+    st == -2 ? "v*<WMA45" : st == -1 ? "vRSI<MA9" : st == 2 ? "^*>WMA45" : st == 1 ? "^RSI>MA9" : "-RSI=MA9"
+
+f_macd_str(int st) =>
+    st == -2 ? "vDOWN" : st == -1 ? "vBUY-" : st == 2 ? "^UP" : st == 1 ? "^SEL+" : "-FLAT"
+
+f_row_color(int bulls, int bears, int stochDir, bool isHtf, bool sellExh, bool buyExh) =>
+    isHtf and (sellExh or buyExh) ? color.rgb(255, 202, 40) : (bears >= 3 and stochDir < 0) ? color.rgb(255, 92, 92) : (bulls >= 3 and stochDir > 0) ? color.rgb(0, 230, 180) : bears > bulls ? color.rgb(255, 158, 158) : bulls > bears ? color.rgb(128, 222, 208) : color.rgb(176, 186, 204)
+
+f_dash_pos(string p) =>
+    switch p
+        "Top-Left"      => position.top_left
+        "Top-Right"     => position.top_right
+        "Bottom-Left"   => position.bottom_left
+        "Bottom-Right"  => position.bottom_right
+        "Top-Center"    => position.top_center
+        "Bottom-Center" => position.bottom_center
+        => position.top_left
+
+f_dash_size(string s) =>
+    switch s
+        "Tiny"   => size.tiny
+        "Small"  => size.small
+        "Normal" => size.normal
+        => size.small
+
+var table mtfDash = table.new(f_dash_pos(dashPosInput), 6, 9, bgcolor=color.rgb(22, 27, 38), border_color=color.rgb(72, 84, 112), border_width=1, frame_color=color.rgb(72, 84, 112), frame_width=1)
+var label candleTimerLbl = na
+
+f_candle_countdown() =>
+    remMs = math.max(0, time_close - timenow)
+    totalSec = int(math.floor(remMs / 1000))
+    hrs  = int(math.floor(totalSec / 3600))
+    mins = int(math.floor((totalSec % 3600) / 60))
+    secs = totalSec % 60
+    hrs > 0 ? str.tostring(hrs, "00") + ":" + str.tostring(mins, "00") + ":" + str.tostring(secs, "00") : str.tostring(mins, "00") + ":" + str.tostring(secs, "00")
+
+shouldDrawDash = showDash and (not onlyOnM15 or timeframe.period == "15" or timeframe.period == "5")
+
+// Build Multi-Pair Radar String
+radarHits = ""
+if enableScanner
+    if math.abs(sigSym1) >= minAlertTier
+        radarHits += (radarHits == "" ? "" : " ") + f_short_sym(scanSym1) + "[" + f_sig_badge(sigSym1) + "]"
+    if math.abs(sigSym2) >= minAlertTier
+        radarHits += (radarHits == "" ? "" : " ") + f_short_sym(scanSym2) + "[" + f_sig_badge(sigSym2) + "]"
+    if math.abs(sigSym3) >= minAlertTier
+        radarHits += (radarHits == "" ? "" : " ") + f_short_sym(scanSym3) + "[" + f_sig_badge(sigSym3) + "]"
+    if math.abs(sigSym4) >= minAlertTier
+        radarHits += (radarHits == "" ? "" : " ") + f_short_sym(scanSym4) + "[" + f_sig_badge(sigSym4) + "]"
+    if math.abs(sigSym5) >= minAlertTier
+        radarHits += (radarHits == "" ? "" : " ") + f_short_sym(scanSym5) + "[" + f_sig_badge(sigSym5) + "]"
+radarText = radarHits != "" ? "RADAR 15M: " + radarHits : "RADAR 15M (5 pairs): Scanning..."
+
+f_render_tf_row(table tbl, int r, string tfLabel, int emaSt, int stDir, float kV, float dV, bool ob, bool os, int rsiSt, int macdSt, int bulls, int bears, bool isHtf, bool sellExh, bool buyExh, color bgCol, string txtSz) =>
+    rCol = f_row_color(bulls, bears, stDir, isHtf, sellExh, buyExh)
+    vote = isHtf and sellExh ? "OB-" : isHtf and buyExh ? "OS+" : bears > bulls ? str.tostring(bears) + "/4v" : bulls > bears ? str.tostring(bulls) + "/4^" : "2/2-"
+    table.cell(tbl, 0, r, tfLabel,                             text_color=rCol, bgcolor=bgCol, text_size=txtSz, text_halign=text.align_left, text_font_family=font.family_monospace)
+    table.cell(tbl, 1, r, f_ema_str(emaSt),                    text_color=rCol, bgcolor=bgCol, text_size=txtSz, text_halign=text.align_left, text_font_family=font.family_monospace)
+    table.cell(tbl, 2, r, f_stoch_str(stDir, kV, dV, ob, os),  text_color=rCol, bgcolor=bgCol, text_size=txtSz, text_halign=text.align_left, text_font_family=font.family_monospace)
+    table.cell(tbl, 3, r, f_rsi_str(rsiSt),                    text_color=rCol, bgcolor=bgCol, text_size=txtSz, text_halign=text.align_left, text_font_family=font.family_monospace)
+    table.cell(tbl, 4, r, f_macd_str(macdSt),                  text_color=rCol, bgcolor=bgCol, text_size=txtSz, text_halign=text.align_left, text_font_family=font.family_monospace)
+    table.cell(tbl, 5, r, vote,                                text_color=rCol, bgcolor=bgCol, text_size=txtSz, text_halign=text.align_left, text_font_family=font.family_monospace)
+
+if barstate.islast
+    cdText = f_candle_countdown()
+    if showCountdown and showPriceTimer
+        if na(candleTimerLbl)
+            candleTimerLbl := label.new(bar_index + 1, close, "T: " + cdText + " [" + timeframe.period + "]", style=label.style_label_left, color=color.rgb(32, 39, 54), textcolor=color.rgb(255, 213, 79), size=size.small)
+        else
+            label.set_xy(candleTimerLbl, bar_index + 1, close)
+            label.set_text(candleTimerLbl, "T: " + cdText + " [" + timeframe.period + "]")
+    else if not na(candleTimerLbl)
+        label.delete(candleTimerLbl)
+        candleTimerLbl := na
+
+    table.clear(mtfDash, 0, 0, 5, 8)
+    if shouldDrawDash
+        txtSz   = f_dash_size(dashSizeInput)
+        mainBg  = color.rgb(22, 27, 38)
+        hdrBg   = color.rgb(32, 39, 54)
+        ftrBg   = color.rgb(28, 35, 50)
+        radBg   = color.rgb(18, 23, 33)
+        modeTag = useLive ? "LIVE" : "CLSD"
+        timerHeaderSeg = showCountdown ? " T:" + timeframe.period + ":" + cdText : ""
+
+        // 1. Top Banner
+        ltfTag          = (showTfM5 and (useM5InVerdict or m5SellConf or m5BuyConf)) ? (showTfM15 ? "M5+M15" : "M5") : "M15"
+        h1BiasTxt       = h1Stoch < 0 ? "H1 Stoch-" : h1Stoch > 0 ? "H1 Stoch+" : "H1 Flat"
+        sellStrongTitle = h4SellConf ? "* STRONG SELL (" + ltfTag + "+H1+H4)" : "* STRONG SELL (" + ltfTag + "+H1+D1)"
+        buyStrongTitle  = h4BuyConf  ? "* STRONG BUY ("  + ltfTag + "+H1+H4)" : "* STRONG BUY ("  + ltfTag + "+H1+D1)"
+        verdictTitle    = finalSig == -3 ? "** SUPER SELL (" + ltfTag + "+H1+H4+D1)" : finalSig == -2 ? sellStrongTitle : finalSig == -1 ? "v SELL CONFIRMED (" + ltfTag + "+H1)" : finalSig == 3 ? "** SUPER BUY (" + ltfTag + "+H1+H4+D1)" : finalSig == 2 ? buyStrongTitle : finalSig == 1 ? "^ BUY CONFIRMED (" + ltfTag + "+H1)" : "⏳ WAIT / SCAN (" + h1BiasTxt + ")"
+        bannerBg        = finalSig <= -2 ? color.rgb(135, 22, 38) : finalSig == -1 ? color.rgb(98, 26, 38) : finalSig >= 2 ? color.rgb(14, 105, 85) : finalSig == 1 ? color.rgb(20, 78, 68) : color.rgb(38, 47, 68)
+        bannerTxt       = finalSig < 0 ? color.rgb(255, 235, 238) : finalSig > 0 ? color.rgb(224, 255, 245) : color.rgb(230, 236, 248)
+
+        table.cell(mtfDash, 0, 0, "[" + syminfo.ticker + " " + modeTag + timerHeaderSeg + "] " + verdictTitle, text_color=bannerTxt, bgcolor=bannerBg, text_size=txtSz, text_halign=text.align_left, text_font_family=font.family_monospace)
+        table.merge_cells(mtfDash, 0, 0, 5, 0)
+
+        // 2. Column Headers
+        colNames = array.from("TF", "1.EMA 5/12", "2.STOCH *", "3.RSI+WMA45", "4.MACD", "VOTE")
+        for c = 0 to 5
+            table.cell(mtfDash, c, 1, array.get(colNames, c), text_color=color.rgb(180, 192, 212), bgcolor=hdrBg, text_size=txtSz, text_halign=text.align_left, text_font_family=font.family_monospace)
+
+        // 3. Dynamic Timeframe Rows (M5, M15, H1, H4, D1 based on Settings toggles)
+        currRow = 2
+        if showTfM5
+            f_render_tf_row(mtfDash, currRow, "M5",  m5Ema,  m5Stoch,  m5K,  m5D,  m5OB,  m5OS,  m5Rsi,  m5Macd,  m5Bull,  m5Bear,  false, false,     false,    mainBg, txtSz)
+            currRow += 1
+        if showTfM15
+            f_render_tf_row(mtfDash, currRow, "M15", m15Ema, m15Stoch, m15K, m15D, m15OB, m15OS, m15Rsi, m15Macd, m15Bull, m15Bear, false, false,     false,    mainBg, txtSz)
+            currRow += 1
+        if showTfH1
+            f_render_tf_row(mtfDash, currRow, "H1",  h1Ema,  h1Stoch,  h1K,  h1D,  h1OB,  h1OS,  h1Rsi,  h1Macd,  h1Bull,  h1Bear,  false, false,     false,    mainBg, txtSz)
+            currRow += 1
+        if showTfH4
+            f_render_tf_row(mtfDash, currRow, "H4",  h4Ema,  h4Stoch,  h4K,  h4D,  h4OB,  h4OS,  h4Rsi,  h4Macd,  h4Bull,  h4Bear,  true,  h4SellExh, h4BuyExh, mainBg, txtSz)
+            currRow += 1
+        if showTfD1
+            f_render_tf_row(mtfDash, currRow, "D1",  d1Ema,  d1Stoch,  d1K,  d1D,  d1OB,  d1OS,  d1Rsi,  d1Macd,  d1Bull,  d1Bear,  true,  d1SellExh, d1BuyExh, mainBg, txtSz)
+            currRow += 1
+
+        // 4. Footer Row (Summary of enabled timeframes)
+        m5W45S     = m5Rsi  == -2 ? "*" : ""
+        m5W45B     = m5Rsi  == 2  ? "*" : ""
+        w45TagSell = m15Rsi == -2 ? "*" : ""
+        w45TagBuy  = m15Rsi == 2  ? "*" : ""
+        h4STag     = h4SellExh ? "OB-" : str.tostring(h4Bear) + "/4v"
+        d1STag     = d1SellExh ? "OB-" : str.tostring(d1Bear) + "/4v"
+        h4BTag     = h4BuyExh  ? "OS+" : str.tostring(h4Bull) + "/4^"
+        d1BTag     = d1BuyExh  ? "OS+" : str.tostring(d1Bull) + "/4^"
+
+        m5SellSeg  = showTfM5 ? "M5[" + str.tostring(m5Bear) + "/4" + m5W45S + "]+" : ""
+        m5BuySeg   = showTfM5 ? "M5[" + str.tostring(m5Bull) + "/4" + m5W45B + "]+" : ""
+        m5VoteSeg  = showTfM5 ? "M5:" + str.tostring(m5Bull) + "B/" + str.tostring(m5Bear) + "S " : ""
+
+        sell3Txt = h4SellConf ? "SELL: " + m5SellSeg + "M15[" + str.tostring(m15Bear) + "/4" + w45TagSell + "]+H1[" + str.tostring(h1Bear) + "/4-]+H4[" + h4STag + "] D1:" + str.tostring(d1Bull) + "B/" + str.tostring(d1Bear) + "S" : "SELL: " + m5SellSeg + "M15[" + str.tostring(m15Bear) + "/4" + w45TagSell + "]+H1[" + str.tostring(h1Bear) + "/4-]+D1[" + d1STag + "] H4:" + str.tostring(h4Bull) + "B/" + str.tostring(h4Bear) + "S"
+        buy3Txt  = h4BuyConf  ? "BUY: "  + m5BuySeg  + "M15[" + str.tostring(m15Bull) + "/4" + w45TagBuy  + "]+H1[" + str.tostring(h1Bear < h1Bull ? h1Bull : h1Bull) + "/4+]+H4[" + h4BTag + "] D1:" + str.tostring(d1Bull) + "B/" + str.tostring(d1Bear) + "S"  : "BUY: "  + m5BuySeg  + "M15[" + str.tostring(m15Bull) + "/4" + w45TagBuy  + "]+H1[" + str.tostring(h1Bull) + "/4+]+D1[" + d1BTag + "] H4:" + str.tostring(h4Bull) + "B/" + str.tostring(h4Bear) + "S"
+
+        ftrText = finalSig == -3 ? "SELL: " + m5SellSeg + "M15[" + str.tostring(m15Bear) + "/4" + w45TagSell + "]+H1[" + str.tostring(h1Bear) + "/4-]+H4[" + h4STag + "]+D1[" + d1STag + "]" : finalSig == -2 ? sell3Txt : finalSig == -1 ? "SELL: " + m5SellSeg + "M15[" + str.tostring(m15Bear) + "/4" + w45TagSell + "]+H1[" + str.tostring(h1Bear) + "/4-] H4:" + str.tostring(h4Bull) + "B/" + str.tostring(h4Bear) + "S D1:" + str.tostring(d1Bull) + "B/" + str.tostring(d1Bear) + "S" : finalSig == 3 ? "BUY: " + m5BuySeg + "M15[" + str.tostring(m15Bull) + "/4" + w45TagBuy + "]+H1[" + str.tostring(h1Bull) + "/4+]+H4[" + h4BTag + "]+D1[" + d1BTag + "]" : finalSig == 2 ? buy3Txt : finalSig == 1 ? "BUY: " + m5BuySeg + "M15[" + str.tostring(m15Bull) + "/4" + w45TagBuy + "]+H1[" + str.tostring(h1Bull) + "/4+] H4:" + str.tostring(h4Bull) + "B/" + str.tostring(h4Bear) + "S D1:" + str.tostring(d1Bull) + "B/" + str.tostring(d1Bear) + "S" : "Votes: " + m5VoteSeg + "M15:" + str.tostring(m15Bull) + "B/" + str.tostring(m15Bear) + "S H1:" + str.tostring(h1Bull) + "B/" + str.tostring(h1Bear) + "S H4:" + str.tostring(h4Bull) + "B/" + str.tostring(h4Bear) + "S D1:" + str.tostring(d1Bull) + "B/" + str.tostring(d1Bear) + "S"
+
+        table.cell(mtfDash, 0, currRow, ftrText, text_color=bannerTxt, bgcolor=ftrBg, text_size=txtSz, text_halign=text.align_left, text_font_family=font.family_monospace)
+        table.merge_cells(mtfDash, 0, currRow, 5, currRow)
+        currRow += 1
+
+        // 5. Multi-Pair 15M Radar Row
+        if enableScanner
+            table.cell(mtfDash, 0, currRow, radarText, text_color=color.rgb(255, 213, 79), bgcolor=radBg, text_size=txtSz, text_halign=text.align_left, text_font_family=font.family_monospace)
+            table.merge_cells(mtfDash, 0, currRow, 5, currRow)
+
+// ============================================================================
+// 6. DYNAMIC ALERT() & ALERTCONDITIONS (15-MINUTE MULTI-PAIR SCANNER)
+// ============================================================================
+if enableAlerts and barstate.isconfirmed
+    newChartHit = math.abs(confSig) >= minAlertTier and confSig != confSig[1]
+    newScanHits = ""
+    if enableScanner
+        if math.abs(sigSym1) >= minAlertTier and sigSym1 != sigSym1[1]
+            newScanHits += (newScanHits == "" ? "" : " | ") + f_short_sym(scanSym1) + ": " + f_sig_badge(sigSym1)
+        if math.abs(sigSym2) >= minAlertTier and sigSym2 != sigSym2[1]
+            newScanHits += (newScanHits == "" ? "" : " | ") + f_short_sym(scanSym2) + ": " + f_sig_badge(sigSym2)
+        if math.abs(sigSym3) >= minAlertTier and sigSym3 != sigSym3[1]
+            newScanHits += (newScanHits == "" ? "" : " | ") + f_short_sym(scanSym3) + ": " + f_sig_badge(sigSym3)
+        if math.abs(sigSym4) >= minAlertTier and sigSym4 != sigSym4[1]
+            newScanHits += (newScanHits == "" ? "" : " | ") + f_short_sym(scanSym4) + ": " + f_sig_badge(sigSym4)
+        if math.abs(sigSym5) >= minAlertTier and sigSym5 != sigSym5[1]
+            newScanHits += (newScanHits == "" ? "" : " | ") + f_short_sym(scanSym5) + ": " + f_sig_badge(sigSym5)
+    if newChartHit or newScanHits != ""
+        m5AlertSeg = showTfM5 ? ("M5:" + str.tostring(cM5Bull) + "B/" + str.tostring(cM5Bear) + "S ") : ""
+        chartMsg   = newChartHit ? (syminfo.ticker + " [" + f_sig_badge(confSig) + " " + m5AlertSeg + "M15:" + str.tostring(cM15Bull) + "B/" + str.tostring(cM15Bear) + "S H1:" + str.tostring(cH1Bull) + "B/" + str.tostring(cH1Bear) + "S H4:" + str.tostring(cH4Bull) + "B/" + str.tostring(cH4Bear) + "S D1:" + str.tostring(cD1Bull) + "B/" + str.tostring(cD1Bear) + "S]") : ""
+        fullMsg    = "[CONFIRMED - ĐÃ ĐÓNG NẾN] " + chartMsg + (chartMsg != "" and newScanHits != "" ? " || RADAR: " : "") + newScanHits
+        alert(fullMsg, alert.freq_once_per_bar_close)
+
+if enableEarlyAlt and not barstate.isconfirmed
+    if math.abs(finalSig) >= minAlertTier and finalSig != confSig[1]
+        alert("[EARLY_WARNING - CHƯA ĐÓNG NẾN] " + syminfo.ticker + " -> " + f_sig_badge(finalSig), alert.freq_once_per_bar)
+
+alertcondition(confSig == -3 and confSig[1] > -3, title="** SUPER SELL (M5/M15+H1+H4+D1)", message="SUPER SELL Confirmed across M5/M15 + H1 + H4 + D1")
+alertcondition(confSig <= -2 and confSig[1] > -2, title="* STRONG SELL (M5/M15+H1+H4/D1)", message="STRONG SELL Confirmed across M5/M15 + H1 + H4/D1")
+alertcondition(confSig <= -1 and confSig[1] > -1, title="v SELL CONFIRMED (M5/M15+H1)",    message="SELL Confirmed across M5/M15 + H1")
+alertcondition(confSig == 3  and confSig[1] < 3,  title="** SUPER BUY (M5/M15+H1+H4+D1)",  message="SUPER BUY Confirmed across M5/M15 + H1 + H4 + D1")
+alertcondition(confSig >= 2  and confSig[1] < 2,  title="* STRONG BUY (M5/M15+H1+H4/D1)",  message="STRONG BUY Confirmed across M5/M15 + H1 + H4/D1")
+alertcondition(confSig >= 1  and confSig[1] < 1,  title="^ BUY CONFIRMED (M5/M15+H1)",     message="BUY Confirmed across M5/M15 + H1")
+

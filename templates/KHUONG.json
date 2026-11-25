@@ -1,0 +1,254 @@
+{
+  "ema5_tf1": {
+    "enabled": true,
+    "type": "EMA",
+    "period": 5,
+    "color": "#ffeb3b",
+    "timeframe": "TF1"
+  },
+  "ema12_tf1": {
+    "enabled": true,
+    "type": "EMA",
+    "period": 12,
+    "color": "#ff9800",
+    "timeframe": "TF1"
+  },
+  "ema21_tf1": {
+    "enabled": true,
+    "type": "EMA",
+    "period": 21,
+    "color": "#4caf50",
+    "timeframe": "TF1"
+  },
+  "ema50_tf1": {
+    "enabled": true,
+    "type": "EMA",
+    "period": 50,
+    "color": "#2962ff",
+    "timeframe": "TF1"
+  },
+  "ema100_tf1": {
+    "enabled": true,
+    "type": "EMA",
+    "period": 100,
+    "color": "#f23645",
+    "timeframe": "TF1"
+  },
+  "ema200_tf1": {
+    "enabled": true,
+    "type": "EMA",
+    "period": 200,
+    "color": "#dbdbdb",
+    "timeframe": "TF1"
+  },
+  "bb_tf1": {
+    "enabled": true,
+    "type": "BB",
+    "period": 20,
+    "std_dev": 2.0,
+    "color": "#38bdf8",
+    "timeframe": "TF1"
+  },
+  "rsi_tf1": {
+    "enabled": true,
+    "type": "RSI_MA9_WMA45",
+    "period": 14,
+    "ma9_period": 9,
+    "wma45_period": 45,
+    "timeframe": "TF1"
+  },
+  "stochastic_tf1": {
+    "enabled": true,
+    "type": "STOCH",
+    "k": 14,
+    "d": 3,
+    "smooth_k": 3,
+    "timeframe": "TF1"
+  },
+  "macd_tf1": {
+    "enabled": true,
+    "type": "MACD",
+    "fast": 12,
+    "slow": 26,
+    "signal": 9,
+    "timeframe": "TF1"
+  },
+  "divergence_tf1": {
+    "enabled": true,
+    "type": "DIVERGENCE",
+    "timeframe": "TF1"
+  },
+  "mtf_signals_tf1": {
+    "enabled": true,
+    "type": "MTF_SIGNALS",
+    "timeframe": "TF1"
+  },
+  "ema5_tf2": {
+    "enabled": true,
+    "type": "EMA",
+    "period": 5,
+    "color": "#ffeb3b",
+    "timeframe": "TF2"
+  },
+  "ema12_tf2": {
+    "enabled": true,
+    "type": "EMA",
+    "period": 12,
+    "color": "#ff9800",
+    "timeframe": "TF2"
+  },
+  "ema21_tf2": {
+    "enabled": true,
+    "type": "EMA",
+    "period": 21,
+    "color": "#4caf50",
+    "timeframe": "TF2"
+  },
+  "ema50_tf2": {
+    "enabled": true,
+    "type": "EMA",
+    "period": 50,
+    "color": "#2962ff",
+    "timeframe": "TF2"
+  },
+  "ema100_tf2": {
+    "enabled": true,
+    "type": "EMA",
+    "period": 100,
+    "color": "#f23645",
+    "timeframe": "TF2"
+  },
+  "ema200_tf2": {
+    "enabled": true,
+    "type": "EMA",
+    "period": 200,
+    "color": "#dbdbdb",
+    "timeframe": "TF2"
+  },
+  "bb_tf2": {
+    "enabled": true,
+    "type": "BB",
+    "period": 20,
+    "std_dev": 2.0,
+    "color": "#818cf8",
+    "timeframe": "TF2"
+  },
+  "rsi_tf2": {
+    "enabled": true,
+    "type": "RSI_MA9_WMA45",
+    "period": 14,
+    "ma9_period": 9,
+    "wma45_period": 45,
+    "timeframe": "TF2"
+  },
+  "stochastic_tf2": {
+    "enabled": true,
+    "type": "STOCH",
+    "k": 14,
+    "d": 3,
+    "smooth_k": 3,
+    "timeframe": "TF2"
+  },
+  "macd_tf2": {
+    "enabled": true,
+    "type": "MACD",
+    "fast": 12,
+    "slow": 26,
+    "signal": 9,
+    "timeframe": "TF2"
+  },
+  "divergence_tf2": {
+    "enabled": true,
+    "type": "DIVERGENCE",
+    "timeframe": "TF2"
+  },
+  "mtf_signals_tf2": {
+    "enabled": true,
+    "type": "MTF_SIGNALS",
+    "timeframe": "TF2"
+  },
+  "ema5_tf3": {
+    "enabled": true,
+    "type": "EMA",
+    "period": 5,
+    "color": "#ffeb3b",
+    "timeframe": "TF3"
+  },
+  "ema12_tf3": {
+    "enabled": true,
+    "type": "EMA",
+    "period": 12,
+    "color": "#ff9800",
+    "timeframe": "TF3"
+  },
+  "ema21_tf3": {
+    "enabled": true,
+    "type": "EMA",
+    "period": 21,
+    "color": "#4caf50",
+    "timeframe": "TF3"
+  },
+  "ema50_tf3": {
+    "enabled": true,
+    "type": "EMA",
+    "period": 50,
+    "color": "#2962ff",
+    "timeframe": "TF3"
+  },
+  "ema100_tf3": {
+    "enabled": true,
+    "type": "EMA",
+    "period": 100,
+    "color": "#f23645",
+    "timeframe": "TF3"
+  },
+  "ema200_tf3": {
+    "enabled": true,
+    "type": "EMA",
+    "period": 200,
+    "color": "#dbdbdb",
+    "timeframe": "TF3"
+  },
+  "bb_tf3": {
+    "enabled": true,
+    "type": "BB",
+    "period": 20,
+    "std_dev": 2.0,
+    "color": "#a855f7",
+    "timeframe": "TF3"
+  },
+  "rsi_tf3": {
+    "enabled": true,
+    "type": "RSI_MA9_WMA45",
+    "period": 14,
+    "ma9_period": 9,
+    "wma45_period": 45,
+    "timeframe": "TF3"
+  },
+  "stochastic_tf3": {
+    "enabled": true,
+    "type": "STOCH",
+    "k": 14,
+    "d": 3,
+    "smooth_k": 3,
+    "timeframe": "TF3"
+  },
+  "macd_tf3": {
+    "enabled": true,
+    "type": "MACD",
+    "fast": 12,
+    "slow": 26,
+    "signal": 9,
+    "timeframe": "TF3"
+  },
+  "divergence_tf3": {
+    "enabled": true,
+    "type": "DIVERGENCE",
+    "timeframe": "TF3"
+  },
+  "mtf_signals_tf3": {
+    "enabled": true,
+    "type": "MTF_SIGNALS",
+    "timeframe": "TF3"
+  }
+}
