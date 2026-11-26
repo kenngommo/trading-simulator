@@ -321,6 +321,7 @@ class DrawingToolsManager {
 
       // Handle creating new drawings & deselecting on empty canvas click
       chart.subscribeClick((param) => {
+        if (window.app && window.app.replayController && window.app.replayController.barCutActive) return;
         if (this.dragState) return;
         if (this.activeTool === 'pointer') {
           if (this.selected) this.selectObject(null, null);

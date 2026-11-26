@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Trading Strategy Simulator & Replay Engine</title>
-  <link rel="stylesheet" href="/static/style.css?v=3.6">
+  <link rel="stylesheet" href="/static/style.css?v=3.8">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
@@ -194,6 +194,12 @@
       <button class="btn-header" id="btnLiveModeToggle" title="Chuyển đổi giữa Chế độ LIVE (MT5 Thị Trường Thực) và Chế độ BACKTEST (Tua Nến)" style="border-color:#ef4444;color:#fca5a5;font-weight:800;padding:4px 12px;background:rgba(239,68,68,0.18);">
         <span id="liveModeDot">🔴</span>
         <span id="liveModeText">Chế độ: BACKTEST (Bấm sang LIVE)</span>
+      </button>
+
+      <!-- TradingView-Style Bar Replay Cut Button -->
+      <button class="btn-header" id="btnRibbonBarCut" title="Thanh Cắt Nến (Bar Cut giống TradingView): Click vào bất kỳ cây nến nào trên biểu đồ để cắt & bắt đầu Backtest từ thời điểm đó (Phím: Alt+X)" style="border-color:#2962ff;color:#60a5fa;font-weight:700;padding:4px 10px;background:rgba(41,98,255,0.15);">
+        <span>✂️</span>
+        <span>Cắt Nến</span>
       </button>
 
       <div class="ribbon-divider"></div>
@@ -627,6 +633,10 @@
   <!-- ================= BOTTOM REPLAY CONTROLLER ================= -->
   <footer class="replay-bar">
     <div class="replay-controls">
+      <button class="btn-header" id="btnReplayBarCut" title="Thanh Cắt Nến (Bar Cut): Click thẳng lên biểu đồ để chọn cây nến bắt đầu Replay (Alt+X)" style="border-color:#2962ff;color:#60a5fa;font-weight:700;padding:4px 10px;background:rgba(41,98,255,0.16);margin-right:4px;">
+        <span>✂️</span>
+        <span>Cắt Nến</span>
+      </button>
       <button class="btn-ctl" id="btnStepBack" title="Lùi 1 nến (Phím: Mũi tên trái)">⏮</button>
       <button class="btn-ctl" id="btnPlay" title="Phát / Tạm dừng (Phím: Space)">▶</button>
       <button class="btn-ctl" id="btnStepForward" title="Tiến 1 nến (Phím: Mũi tên phải)">⏭</button>
@@ -1482,12 +1492,12 @@
 
   <!-- ================= JAVASCRIPT LIBS & APP CODE ================= -->
   <script src="/static/js/lightweight-charts.standalone.production.js?v=4.0"></script>
-  <script src="/static/js/chart_manager.js?v=4.2"></script>
-  <script src="/static/js/drawing_tools.js?v=4.2"></script>
-  <script src="/static/js/script_editor.js?v=4.2"></script>
-  <script src="/static/js/replay_controller.js?v=4.2"></script>
-  <script src="/static/js/indicators.js?v=4.2"></script>
-  <script src="/static/js/trade_panel.js?v=4.2"></script>
-  <script src="/static/js/app.js?v=4.2"></script>
+  <script src="/static/js/chart_manager.js?v=4.3"></script>
+  <script src="/static/js/drawing_tools.js?v=4.3"></script>
+  <script src="/static/js/script_editor.js?v=4.3"></script>
+  <script src="/static/js/replay_controller.js?v=4.3"></script>
+  <script src="/static/js/indicators.js?v=4.3"></script>
+  <script src="/static/js/trade_panel.js?v=4.3"></script>
+  <script src="/static/js/app.js?v=4.3"></script>
 </body>
 </html>
